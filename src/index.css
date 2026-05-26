@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn token bridge — tuned to the government palette */
+    --background: 96 24% 93%;      /* canvas #EDF1EA */
+    --foreground: 156 64% 10%;     /* ink     #072B1E */
+    --card: 0 0% 100%;
+    --card-foreground: 156 64% 10%;
+    --border: 96 22% 87%;          /* line    #DCE5D6 */
+    --input: 96 22% 87%;
+    --primary: 152 97% 21%;        /* brand   #016940 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 96 20% 95%;
+    --secondary-foreground: 156 64% 10%;
+    --muted: 96 16% 92%;
+    --muted-foreground: 152 13% 40%;  /* ink-3 #5A7567 */
+    --accent: 96 20% 95%;
+    --accent-foreground: 156 64% 10%;
+    --destructive: 0 72% 42%;      /* status danger #B91C1C */
+    --destructive-foreground: 0 0% 100%;
+    --ring: 152 97% 21%;
+    --radius: 0.625rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'cv05' 1, 'ss01' 1;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root { min-height: 100vh; }
+
+  /* Typographic refinements */
+  h1, h2, h3, h4 { letter-spacing: -0.015em; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+  .font-mono { font-feature-settings: normal; }
+
+  input, select, textarea, button { font-family: inherit; }
+
+  /* ── Accessibility: keyboard focus parity ───────────────── */
+  /* A single, consistent focus ring for every interactive element.
+     Mouse users don't see it (:focus-visible), keyboard users always do. */
+  :focus-visible {
+    outline: 2px solid #016940;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  /* Elements that paint their own ring opt out of the default outline. */
+  [data-focus-ring="custom"]:focus-visible { outline: none; }
+
+  /* Refined neutral scrollbar (no decorative gradient) */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: #C7D3BE;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #A9BCA0; background-clip: padding-box; }
+
+  input[type='range'] { accent-color: #016940; }
+}
+
+/* ── Motion system — restrained, purposeful, interruptible ── */
+
+@keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px);  } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInLeft { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes scaleIn  { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+@keyframes countUp  { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes skeletonShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.82); } }
+
+.fade-in     { animation: fadeIn 0.3s ease-out both; }
+.chart-enter { animation: fadeInUp 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+.fade-in-up  { animation: fadeInUp 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+.slide-in-l  { animation: slideInLeft 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+.scale-in    { animation: scaleIn 0.25s cubic-bezier(0.22,1,0.36,1) both; }
+.count-up    { animation: countUp 0.45s cubic-bezier(0.22,1,0.36,1) both; }
+
+.delay-1 { animation-delay: 0.04s; }
+.delay-2 { animation-delay: 0.08s; }
+.delay-3 { animation-delay: 0.12s; }
+.delay-4 { animation-delay: 0.16s; }
+.delay-5 { animation-delay: 0.20s; }
+
+/* Live data indicator — subtle breathing dot */
+.pulse-live { animation: pulseDot 2.4s ease-in-out infinite; }
+
+/* Skeleton loading shimmer */
+.skeleton {
+  background: linear-gradient(90deg, #E9EFE3 25%, #F4F8EF 50%, #E9EFE3 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* Card hover lift — restrained */
+.card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.card-hover:hover { transform: translateY(-2px); }
+
+/* Solid gold accent text (no animation, no gradient) */
+.gold-text { color: #C8991E; }
+
+/* Frosted surface for overlays/headers */
+.glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Leaflet map z-index fixes */
+.leaflet-container { z-index: 0; }
+.leaflet-pane { z-index: 1 !important; }
+.leaflet-top, .leaflet-bottom { z-index: 2 !important; }
+
+/* ── Respect reduced-motion: disable all non-essential motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .card-hover:hover { transform: none; }
+}
+
+/* ── Print: official classification watermark ── */
+@media print {
+  body { background: white !important; }
+  aside, header, .no-print { display: none !important; }
+  body::after {
+    content: 'RESTRICTED — GOVERNMENT USE ONLY';
+    position: fixed;
+    bottom: 1cm;
+    right: 1cm;
+    font-size: 8pt;
+    color: rgba(0,0,0,0.22);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+}
