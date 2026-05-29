@@ -11,20 +11,25 @@ import { useCountry } from '@/context/CountryContext';
 import { useDataStore } from '@/store/dataStore';
 import { useRole } from '@/hooks/useRole';
 import { mutationService } from '@/services/mutationService';
+import { Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { cn, formatMillions, formatDate } from '@/lib/utils';
+import { cn, formatMillions } from '@/lib/utils';
 import type { Commodity } from '@/data/types';
 
+// Commodity palette drawn exclusively from the government design
+// Per-commodity legend colours. Distinct hue per mineral so the
+// scatter and legend read unambiguously: bauxite blue, gold orange,
+// iron purple, lithium grey, manganese green.
 const COMMODITY_COLORS: Record<string, string> = {
-  bauxite: '#1d4ed8',
-  gold: '#d97706',
-  'iron ore': '#7c3aed',
-  manganese: '#059669',
-  nickel: '#dc2626',
-  lithium: '#9ca3af',
-  diamonds: '#0891b2',
+  bauxite:    '#2563eb', // blue-600   — bauxite
+  gold:       '#f97316', // orange-500 — gold
+  'iron ore': '#7c3aed', // violet-600 — iron
+  manganese:  '#16a34a', // green-600  — manganese
+  nickel:     '#ce1126', // status-danger — Pan-African red (reserved)
+  lithium:    '#6b7280', // gray-500   — lithium
+  diamonds:   '#565c65', // ink-3      — institutional neutral
 };
 
 const COUNTRY_NAMES: Record<string, string> = { GIN: 'Guinea', GHA: 'Ghana', CIV: "Côte d'Ivoire" };
@@ -87,8 +92,8 @@ export function NegotiationPage() {
   return (
     <div>
       <PageHeader
-        title="Negotiation Intelligence"
-        subtitle="Benchmarking contract terms — royalty rates, deal values, and historical trends"
+        title="Module 2 — Negotiation Intelligence"
+        subtitle="State-side negotiation support through EITI / IGF MPF / OECD / NRGI benchmarking, IMF DIGNAR-type scenario simulation, and IFC PS-mapped clause recommendations · ACCI §6.2"
       />
 
       {/* Benchmark stats */}
@@ -102,10 +107,11 @@ export function NegotiationPage() {
       )}
 
       {/* Filters */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-4 flex-wrap" role="group" aria-label="Filter benchmarking by commodity">
         <button
           onClick={() => setSelectedCommodity('all')}
-          className={cn('text-sm px-3 py-1.5 rounded border', selectedCommodity === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-line text-ink-2')}
+          aria-pressed={selectedCommodity === 'all'}
+          className={cn('text-sm px-3 py-1.5 rounded-lg border transition-colors', selectedCommodity === 'all' ? 'bg-brand-600 text-white border-brand-600' : 'bg-surface border-line text-ink-2 hover:bg-surface-2')}
         >
           All Commodities
         </button>
@@ -113,7 +119,8 @@ export function NegotiationPage() {
           <button
             key={c}
             onClick={() => setSelectedCommodity(c)}
-            className={cn('text-sm px-3 py-1.5 rounded border capitalize', selectedCommodity === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-line text-ink-2')}
+            aria-pressed={selectedCommodity === c}
+            className={cn('text-sm px-3 py-1.5 rounded-lg border capitalize transition-colors', selectedCommodity === c ? 'bg-brand-600 text-white border-brand-600' : 'bg-surface border-line text-ink-2 hover:bg-surface-2')}
           >
             {c}
           </button>
@@ -123,7 +130,7 @@ export function NegotiationPage() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {/* Royalty rate vs contract value scatter */}
-        <div className="bg-white rounded border border-line shadow-sm p-4">
+        <div className="bg-surface rounded-xl border border-line shadow-card p-4">
           <div className="text-sm font-semibold text-ink mb-1">Royalty Rate vs Contract Value</div>
           <div className="text-xs text-ink-4 mb-3">Each dot is an active agreement — hover for details</div>
           <ResponsiveContainer width="100%" height={220}>
@@ -148,10 +155,10 @@ export function NegotiationPage() {
                   if (!payload?.[0]) return null;
                   const d = payload[0].payload;
                   return (
-                    <div className="bg-white border border-line rounded p-2 text-xs shadow">
-                      <div className="font-medium">{d.operator}</div>
+                    <div className="bg-surface border border-line rounded-lg p-2.5 text-xs shadow-card">
+                      <div className="font-medium text-ink">{d.operator}</div>
                       <div className="text-ink-3">{d.country} · {d.commodity}</div>
-                      <div>{d.x}% royalty · {formatMillions(d.y * 1_000_000)}</div>
+                      <div className="text-ink-2">{d.x}% royalty · {formatMillions(d.y * 1_000_000)}</div>
                     </div>
                   );
                 }}
@@ -175,34 +182,34 @@ export function NegotiationPage() {
         </div>
 
         {/* Historical trend */}
-        <div className="bg-white rounded border border-line shadow-sm p-4">
+        <div className="bg-surface rounded-xl border border-line shadow-card p-4">
           <div className="text-sm font-semibold text-ink mb-1">Average Royalty Rate — Historical Trend</div>
           <div className="text-xs text-ink-4 mb-3">By year of agreement signing — are terms improving?</div>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={historicalTrend} margin={{ top: 4, right: 8, bottom: 4, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} domain={[3, 8]} tickFormatter={v => `${v}%`} />
-              <Tooltip formatter={(v: unknown) => [`${v}%`, 'Avg Royalty']} />
-              <ReferenceLine y={benchmarkStats?.median ?? 5} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: 'Median', position: 'right', style: { fontSize: 10, fill: '#94a3b8' } }} />
-              <Line type="monotone" dataKey="avgRate" stroke="#1d4ed8" strokeWidth={2} dot={{ r: 4, fill: '#1d4ed8' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EBF0E6" />
+              <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#7A9A88' }} />
+              <YAxis tick={{ fontSize: 10, fill: '#7A9A88' }} domain={[3, 9]} tickFormatter={v => `${v}%`} />
+              <Tooltip formatter={(v: unknown) => [`${v}%`, 'Avg Royalty']} contentStyle={{ background: '#ffffff', border: '1px solid #dfe1e2', borderRadius: 6, fontSize: 12 }} />
+              <ReferenceLine y={benchmarkStats?.median ?? 5} stroke="#71767a" strokeDasharray="4 4" label={{ value: 'Median', position: 'right', style: { fontSize: 10, fill: '#71767a' } }} />
+              <Line type="monotone" dataKey="avgRate" stroke="#006b3f" strokeWidth={2} dot={{ r: 4, fill: '#006b3f' }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* Agreement benchmarking table */}
-      <div className="bg-white rounded border border-line shadow-sm">
-        <div className="px-5 py-3 border-b border-line-soft">
+      <div className="bg-surface rounded-xl border border-line shadow-card overflow-hidden">
+        <div className="px-5 py-3 border-b border-line-soft bg-surface-2">
           <h2 className="text-sm font-semibold text-ink">Individual Agreement Benchmarking</h2>
-          <p className="text-xs text-ink-4 mt-0.5">Each agreement compared to peer agreements of the same commodity type</p>
+          <p className="text-xs text-ink-4 mt-0.5">Each agreement compared to peer agreements of the same commodity type — Negotiation Vulnerability Index (ACCI §6.2)</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-line-soft text-left">
+              <tr className="border-b border-line-soft bg-surface-2 text-left">
                 {['Agreement', 'Operator', 'Country', 'Commodity', 'This Rate', 'Peer Median', 'vs Median', 'Value', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-xs font-medium text-ink-3 whitespace-nowrap">{h}</th>
+                  <th key={h} scope="col" className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ink-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -213,7 +220,13 @@ export function NegotiationPage() {
                 const isAbove = a.vsMedian > 0.5;
 
                 return (
-                  <tr key={a.id} className="hover:bg-surface-2">
+                  <tr
+                    key={a.id}
+                    className="hover:bg-surface-2"
+                    data-ai-entity={`agreement:${a.id}`}
+                    data-ai-label={a.id}
+                    data-ai-sub={`${op?.name ?? a.operatorId} · ${a.commodity} · royalty ${a.royaltyRate}% (peer ${a.peerMedianRoyalty}%)`}
+                  >
                     <td className="px-4 py-3">
                       <div className="font-mono text-xs text-ink-4">{a.id}</div>
                       <div className="text-xs text-ink-2 mt-0.5 max-w-48 truncate">{a.concesssionArea}</div>
@@ -228,7 +241,8 @@ export function NegotiationPage() {
                             type="number"
                             defaultValue={a.royaltyRate}
                             step="0.1"
-                            className="w-16 px-1.5 py-0.5 border border-line-strong rounded text-sm text-ink focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            data-focus-ring="custom"
+                            className="w-16 px-1.5 py-0.5 border border-line-strong rounded text-sm text-ink outline-none focus:border-brand-600 focus:shadow-focus-ring"
                             onBlur={(e) => {
                               const newVal = parseFloat(e.target.value);
                               if (!isNaN(newVal) && newVal !== a.royaltyRate) {
@@ -249,7 +263,7 @@ export function NegotiationPage() {
                     </td>
                     <td className="px-4 py-3 tabular-nums text-ink-3">{a.peerMedianRoyalty}%</td>
                     <td className="px-4 py-3">
-                      <span className={cn('text-sm font-semibold tabular-nums', isBelow ? 'text-red-600' : isAbove ? 'text-emerald-600' : 'text-ink-3')}>
+                      <span className={cn('text-sm font-semibold tabular-nums', isBelow ? 'text-status-danger' : isAbove ? 'text-status-success' : 'text-ink-3')}>
                         {a.vsMedian > 0 ? '+' : ''}{a.vsMedian.toFixed(1)}pp
                       </span>
                     </td>
@@ -264,14 +278,29 @@ export function NegotiationPage() {
           </table>
         </div>
 
-        {/* Negotiation guidance */}
-        <div className="px-5 py-4 border-t border-line-soft bg-blue-50 rounded-b">
-          <div className="text-xs font-medium text-blue-800 mb-1">Negotiation positioning note</div>
-          <div className="text-xs text-blue-700">
-            Agreements marked in red (below peer median) represent potential revenue leakage.
-            When entering renewal negotiations, use peer-median benchmarks as the floor —
-            not the target. Higher-value contracts typically warrant rates at or above median.
-            The historical trend shows whether the state's negotiating position has improved over time.
+        {/* AI Negotiation Memo — right-click any row above to draft a state-side brief */}
+        <div className="px-5 py-3 border-t border-line-soft bg-surface-2 flex items-start gap-2">
+          <Sparkles size={12} className="text-brand-600 shrink-0 mt-0.5" />
+          <div className="text-[11px] text-ink-3 leading-relaxed">
+            <span className="font-semibold text-ink-2">Tip:</span> right-click any agreement row above to
+            generate an AI negotiation memo grounded in that agreement's peer benchmarks — floors, asks,
+            counter-arguments, and talking points. Or right-click anywhere on the page for a section-level read.
+          </div>
+        </div>
+
+        {/* Negotiation guidance — mirrors markdown.md §6.2 + §8 sector context */}
+        <div className="px-5 py-4 border-t border-line-soft bg-brand-50">
+          <div className="text-xs font-bold uppercase tracking-widest text-brand-700 mb-1">
+            Negotiation positioning note
+          </div>
+          <div className="text-xs leading-relaxed text-brand-800">
+            Agreements below peer median represent potential revenue leakage. In renewal negotiations,
+            use peer-median benchmarks as the floor — not the target — and calibrate against the IGF
+            MPF, NRGI RGI 2021 country scores and the IMF DIGNAR-type scenarios in IMF Country Report
+            24/131. Ghana&apos;s Royalty Regulations 2025 (5–12% sliding) and Côte d&apos;Ivoire&apos;s
+            2025 Finance Act 8% above USD 2,000/oz establish the contemporary regional floor; the
+            EITI Guinea June 2025 Simandou fiscal-modelling study (USD 700 m – USD 1.7 bn/yr pre-2035,
+            rising to USD 2.7 bn/yr thereafter) anchors the iron-ore benchmark.
           </div>
         </div>
       </div>

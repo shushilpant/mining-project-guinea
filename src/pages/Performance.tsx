@@ -35,8 +35,8 @@ const TYPE_LABELS: Record<CommitmentType, string> = {
 const COUNTRY_NAMES: Record<string, string> = { GIN: 'Guinea', GHA: 'Ghana', CIV: "Côte d'Ivoire" };
 
 // Gov palette for radar/bars
-const GOV_RADAR_STROKE = '#016940';
-const GOV_RADAR_FILL   = '#016940';
+const GOV_RADAR_STROKE = '#006b3f'; // brand-600 — Ghana flag green
+const GOV_RADAR_FILL   = '#006b3f';
 
 // ─── Scorecards list ─────────────────────────────────────────
 
@@ -93,8 +93,8 @@ export function PerformancePage() {
   return (
     <div>
       <PageHeader
-        title="Performance & Compliance Monitoring"
-        subtitle="Operator scorecards — delivery against all commitments"
+        title="Module 3 — Performance & Compliance Monitoring"
+        subtitle="Real-time, exception-based monitoring of contractual obligations against operational data streams · ACCI §6.3"
       />
 
       {/* Commitment type breakdown */}
@@ -221,6 +221,9 @@ export function PerformancePage() {
                       key={sc.operatorId}
                       className="cursor-pointer border-b border-line-soft transition-colors [&:nth-child(even)]:bg-surface-2 hover:bg-brand-600/[0.06]"
                       onClick={() => navigate(`/performance/${sc.operatorId}`)}
+                      data-ai-entity={`operator:${sc.operatorId}`}
+                      data-ai-label={sc.operatorName}
+                      data-ai-sub={`${op.parentCompany} · compliance ${sc.complianceRate}% · ${sc.openFlags} open flags`}
                     >
                       <td className="px-4 py-3 font-semibold text-ink">{sc.operatorName}</td>
                       <td className="px-4 py-3 text-[12px] text-ink-3">
@@ -394,7 +397,12 @@ export function OperatorDetailPage() {
       </button>
 
       {/* Operator header */}
-      <div className="bg-surface rounded-xl border border-line shadow-card p-5 mb-4">
+      <div
+        className="bg-surface rounded-xl border border-line shadow-card p-5 mb-4"
+        data-ai-entity={`operator:${operator.id}`}
+        data-ai-label={operator.name}
+        data-ai-sub={`${operator.parentCompany} · ${operator.countryOfRegistration}`}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[17px] font-bold text-ink">{operator.name}</h1>
@@ -507,7 +515,13 @@ export function OperatorDetailPage() {
                 : null;
 
             return (
-              <div key={cmt.id} className="px-5 py-4">
+              <div
+                key={cmt.id}
+                className="px-5 py-4"
+                data-ai-entity={`commitment:${cmt.id}`}
+                data-ai-label={cmt.id}
+                data-ai-sub={`${cmt.type} · target ${cmt.targetValue} ${cmt.targetUnit}`}
+              >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] text-ink-2">{cmt.description}</div>
@@ -543,14 +557,14 @@ export function OperatorDetailPage() {
                         >
                           <defs>
                             <linearGradient id={`sparkGrad-${cmt.id}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#016940" stopOpacity={0.2} />
-                              <stop offset="100%" stopColor="#016940" stopOpacity={0} />
+                              <stop offset="0%" stopColor="#006b3f" stopOpacity={0.2} />
+                              <stop offset="100%" stopColor="#006b3f" stopOpacity={0} />
                             </linearGradient>
                           </defs>
                           <Area
                             type="monotone"
                             dataKey="value"
-                            stroke="#016940"
+                            stroke="#006b3f"
                             strokeWidth={1.5}
                             fill={`url(#sparkGrad-${cmt.id})`}
                             dot={false}

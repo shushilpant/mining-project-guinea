@@ -19,8 +19,14 @@ export function formatPercent(n: number, decimals = 1): string {
   return `${n.toFixed(decimals)}%`;
 }
 
+// Anchor "today" to the manuscript reference date (end of the
+// May 2025 – May 2026 study window described in markdown.md §1)
+// so deadline calculations are deterministic and align with the
+// fact-audit matrix (Part B) rather than drifting with wall-clock.
+export const REFERENCE_DATE = '2026-05-27';
+
 export function daysUntil(dateStr: string): number {
-  const today = new Date('2024-05-24');
+  const today = new Date(REFERENCE_DATE);
   const target = new Date(dateStr);
   return Math.floor((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }

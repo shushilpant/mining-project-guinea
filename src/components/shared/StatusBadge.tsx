@@ -2,10 +2,10 @@ import { cn } from '@/lib/utils';
 import type { ComplianceStatus, RiskSeverity, AgreementStatus } from '@/data/types';
 
 const COMPLIANCE_STYLES: Record<ComplianceStatus, { cls: string; dot: string }> = {
-  'met':      { cls: 'bg-emerald-50 text-emerald-800 border-emerald-200',   dot: '#059669' },
-  'on-track': { cls: 'bg-blue-50 text-blue-700 border-blue-200',            dot: '#2563eb' },
-  'at-risk':  { cls: 'bg-amber-50 text-amber-800 border-amber-200',          dot: '#d97706' },
-  'breached': { cls: 'bg-red-50 text-red-800 border-red-200',                dot: '#dc2626' },
+  'met':      { cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',   dot: '#10B981' },
+  'on-track': { cls: 'bg-blue-500/10 text-blue-400 border-blue-500/20',            dot: '#3B82F6' },
+  'at-risk':  { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20',          dot: '#F59E0B' },
+  'breached': { cls: 'bg-red-500/10 text-red-400 border-red-500/20',                dot: '#EF4444' },
 };
 
 const COMPLIANCE_LABELS: Record<ComplianceStatus, string> = {
@@ -16,16 +16,16 @@ const COMPLIANCE_LABELS: Record<ComplianceStatus, string> = {
 };
 
 const SEVERITY_STYLES: Record<RiskSeverity, { cls: string; dot: string }> = {
-  'low':      { cls: 'bg-surface-2 text-ink-3 border-line-strong',          dot: '#8AA396' },
-  'medium':   { cls: 'bg-amber-50 text-amber-800 border-amber-200',         dot: '#d97706' },
-  'high':     { cls: 'bg-orange-50 text-orange-800 border-orange-200',      dot: '#ea580c' },
-  'critical': { cls: 'bg-red-50 text-red-800 border-red-200',               dot: '#dc2626' },
+  'low':      { cls: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',             dot: '#A1A1AA' },
+  'medium':   { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20',          dot: '#F59E0B' },
+  'high':     { cls: 'bg-orange-500/10 text-orange-400 border-orange-500/20',       dot: '#F97316' },
+  'critical': { cls: 'bg-red-500/10 text-red-400 border-red-500/20',                dot: '#EF4444' },
 };
 
 const AGREEMENT_STYLES: Record<AgreementStatus, { cls: string; dot: string }> = {
-  'active':       { cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', dot: '#059669' },
-  'lapsed':       { cls: 'bg-surface-2 text-ink-3 border-line-strong',        dot: '#8AA396' },
-  'under-review': { cls: 'bg-amber-50 text-amber-800 border-amber-200',        dot: '#d97706' },
+  'active':       { cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: '#10B981' },
+  'lapsed':       { cls: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',          dot: '#A1A1AA' },
+  'under-review': { cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20',       dot: '#F59E0B' },
 };
 
 const AGREEMENT_LABELS: Record<AgreementStatus, string> = {
@@ -57,16 +57,17 @@ export function StatusBadge({ type, value, size = 'md' }: Props) {
 
   return (
     <span className={cn(
-      'inline-flex items-center gap-1.5 rounded-md border font-semibold tracking-wide',
-      size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]',
+      'inline-flex items-center gap-1.5 rounded-lg border font-bold tracking-wide backdrop-blur-sm',
+      size === 'sm' ? 'px-2.5 py-1 text-[10px]' : 'px-3 py-1.5 text-[11px]',
       style.cls,
     )}>
       <span
-        className="shrink-0 rounded-full"
+        className="shrink-0 rounded-full shadow-glow"
         style={{
-          width: size === 'sm' ? 5 : 6,
-          height: size === 'sm' ? 5 : 6,
+          width: size === 'sm' ? 6 : 8,
+          height: size === 'sm' ? 6 : 8,
           background: style.dot,
+          boxShadow: `0 0 8px ${style.dot}80`,
           flexShrink: 0,
         }}
       />

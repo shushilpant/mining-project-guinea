@@ -8,110 +8,122 @@ export default {
   theme: {
     extend: {
       colors: {
-        // ── shadcn token bridge (kept so existing usage never breaks) ──
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        card: {
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
+        },
+        popover: {
+          DEFAULT: "var(--background)",
+          foreground: "var(--foreground)",
+        },
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
         },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+        destructive: {
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
         },
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
 
-        // ── Government design system (single source of truth) ──
-        // Forest — brand dark / sidebar / authority
-        forest: {
-          950: "#011A12",
-          900: "#011F14",
-          800: "#012C1D",
-          700: "#013A27",
-          600: "#024B33",
-        },
-        // Brand green — primary action
+        // Brand colors updated for dark theme vibrancy
         brand: {
-          50:  "#ECF5F0",
-          100: "#D3E8DD",
-          200: "#A7D1BB",
-          300: "#6FB494",
-          500: "#019059",
-          600: "#016940", // primary
-          700: "#015534",
-          800: "#01432A",
+          50:  "var(--brand-50)",
+          100: "var(--brand-100)",
+          200: "var(--brand-200)",
+          300: "var(--brand-300)",
+          500: "var(--brand-500)",
+          600: "var(--brand-600)",
+          700: "var(--brand-700)",
+          800: "var(--brand-800)",
         },
-        // Gold — accent only, used sparingly
         gold: {
-          400: "#E0B84A",
-          500: "#C8991E", // accent
-          600: "#A87E14",
+          400: "var(--gold-400)",
+          500: "var(--gold-500)",
+          600: "var(--gold-600)",
         },
-        // Ink — text ramp tuned toward forest
+        // Old colors mapped to variables for theming
+        forest: {
+          950: "var(--forest-950)",
+          900: "var(--forest-900)",
+          800: "var(--forest-800)",
+          700: "var(--forest-700)",
+          600: "var(--forest-600)",
+        },
+        blue: {
+          50:  "#eff6ff",
+          100: "#dbeafe",
+          200: "#bfdbfe",
+          300: "#93c5fd",
+          400: "#60a5fa",
+          500: "#3b82f6",
+          600: "#2563eb",
+          700: "#1d4ed8",
+          800: "#1e40af",
+          900: "#1e3a8a",
+        },
         ink: {
-          DEFAULT: "#072B1E", // primary text
-          2: "#2D5240",       // secondary
-          3: "#5A7567",       // muted
-          4: "#8AA396",       // placeholder / faint
+          DEFAULT: "var(--foreground)",
+          2: "var(--ink-2)",
+          3: "var(--ink-3)",
+          4: "var(--ink-4)",
         },
-        // Surfaces & lines
-        canvas: "#EDF1EA",      // page background (sage-white)
-        surface: "#FFFFFF",     // cards
-        "surface-2": "#F6F9F3", // subtle raised / hover rows
+        canvas: "var(--background)",
+        surface: "var(--card)",
+        "surface-2": "var(--secondary)",
         line: {
-          DEFAULT: "#DCE5D6", // borders
-          soft: "#E9EFE3",    // dividers
-          strong: "#C7D3BE",  // emphasised borders
+          DEFAULT: "var(--border)",
+          soft: "var(--line-soft)",
+          strong: "var(--line-strong)",
         },
-        // Status — calm, accessible
         status: {
-          success: "#047857",
-          info:    "#1D6FB8",
-          warning: "#B45309",
-          danger:  "#B91C1C",
+          success: "var(--primary)",
+          info:    "var(--accent)",
+          warning: "#F59E0B",
+          danger:  "var(--destructive)",
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        sans: ['"Outfit"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        xs:   '0 1px 2px rgba(2,28,18,0.04)',
-        sm:   '0 1px 3px rgba(2,28,18,0.05), 0 1px 2px rgba(2,28,18,0.04)',
-        card: '0 1px 2px rgba(2,28,18,0.04), 0 6px 16px rgba(2,28,18,0.05)',
-        md:   '0 4px 18px rgba(2,28,18,0.08)',
-        lg:   '0 14px 36px rgba(2,28,18,0.10)',
-        pop:  '0 18px 50px rgba(2,28,18,0.16)',
-        'focus-ring': '0 0 0 3px rgba(1,105,64,0.22)',
+        xs:   '0 1px 2px rgba(0,0,0,0.1)',
+        sm:   '0 2px 4px rgba(0,0,0,0.1)',
+        card: '0 8px 32px rgba(0,0,0,0.1)',
+        md:   '0 12px 40px rgba(0,0,0,0.15)',
+        lg:   '0 24px 60px rgba(0,0,0,0.2)',
+        pop:  '0 32px 80px rgba(0,0,0,0.2)',
+        'focus-ring': '0 0 0 3px var(--ring)',
+        glow: '0 0 20px var(--ring)',
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-        xl: "0.75rem",
-        '2xl': "1rem",
+        lg: "0.75rem",
+        md: "0.5rem",
+        sm: "0.25rem",
+        xl: "1rem",
+        '2xl': "1.25rem",
+        '3xl': "1.75rem",
       },
-      letterSpacing: {
-        tightest: '-0.03em',
-        snugger: '-0.015em',
+      backgroundImage: {
+        'glass-gradient': 'linear-gradient(135deg, var(--secondary) 0%, transparent 100%)',
+        'glass-border': 'linear-gradient(135deg, var(--border) 0%, transparent 100%)',
       },
       keyframes: {
         'fade-in': {
@@ -119,18 +131,23 @@ export default {
           to:   { opacity: '1' },
         },
         'fade-in-up': {
-          from: { opacity: '0', transform: 'translateY(8px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
+          from: { opacity: '0', transform: 'translateY(12px) scale(0.98)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
         'scale-in': {
-          from: { opacity: '0', transform: 'scale(0.98)' },
+          from: { opacity: '0', transform: 'scale(0.95)' },
           to:   { opacity: '1', transform: 'scale(1)' },
         },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.5' },
+          '50%': { opacity: '1' },
+        }
       },
       animation: {
-        'fade-in':    'fade-in 0.3s ease-out both',
-        'fade-in-up': 'fade-in-up 0.35s cubic-bezier(0.22,1,0.36,1) both',
-        'scale-in':   'scale-in 0.25s cubic-bezier(0.22,1,0.36,1) both',
+        'fade-in':    'fade-in 0.4s ease-out both',
+        'fade-in-up': 'fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'scale-in':   'scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
       },
     },
   },

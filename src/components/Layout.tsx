@@ -1,30 +1,42 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useCountry } from '@/context/CountryContext';
 import { CountrySelector } from '@/components/shared/CountrySelector';
 import { NotificationPanel } from '@/components/shared/NotificationPanel';
 import { GlobalSearch } from '@/components/shared/GlobalSearch';
+import { AIAssistant } from '@/components/shared/AIAssistant';
+import { AIContextMenu } from '@/components/shared/AIContextMenu';
+import { AIBriefingPopover } from '@/components/shared/AIBriefingPopover';
 import { useAuthStore } from '@/store/authStore';
+import { useThemeStore } from '@/store/themeStore';
 import { useRole } from '@/hooks/useRole';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, FileText, BarChart3, AlertTriangle,
-  Globe, Scale, Clock, LogOut, Settings, ChevronRight, Activity, ScrollText,
+  Globe, Scale, Clock, LogOut, Settings, ChevronRight, Activity, ScrollText, Shield, Sun, Moon, TrendingUp, Users, Building2
 } from 'lucide-react';
 
-interface NavItemDef { to: string; label: string; icon: LucideIcon; exact: boolean; }
+interface NavItemDef { to: string; label: string; module?: string; icon: LucideIcon; exact: boolean; }
 
 const NAV_ITEMS: NavItemDef[] = [
-  { to: '/',             label: 'Dashboard',     icon: LayoutDashboard, exact: true },
-  { to: '/agreements',   label: 'Agreements',    icon: FileText,        exact: false },
-  { to: '/performance',  label: 'Performance',   icon: BarChart3,       exact: false },
-  { to: '/risk',         label: 'Risk & Breach', icon: AlertTriangle,   exact: false },
-  { to: '/transparency', label: 'Transparency',  icon: Globe,           exact: false },
-  { to: '/negotiation',  label: 'Negotiation',   icon: Scale,           exact: false },
+  { to: '/',             module: 'Overview', label: 'Executive Dashboard',         icon: LayoutDashboard, exact: true  },
+  { to: '/agreements',   module: 'M1',       label: 'Contract & Agreement Intelligence', icon: FileText,        exact: false },
+  { to: '/negotiation',  module: 'M2',       label: 'Negotiation Intelligence',           icon: Scale,           exact: false },
+  { to: '/performance',  module: 'M3',       label: 'Performance & Compliance Monitoring', icon: BarChart3,      exact: false },
+  { to: '/risk',         module: 'M4',       label: 'Breach & Risk Detection',            icon: AlertTriangle,   exact: false },
+  { to: '/transparency', module: 'M5',       label: 'Transparency & Reporting',           icon: Globe,           exact: false },
+  { to: '/scenarios',    module: 'M6',       label: 'Fiscal Scenario Modelling',          icon: TrendingUp,      exact: false },
+  { to: '/ownership',    module: 'M7',       label: 'Beneficial Ownership',               icon: Users,           exact: false },
+  { to: '/local-content',module: 'M8',       label: 'Local Content Auditing',             icon: Building2,       exact: false },
 ];
 
-const ADMIN_NAV: NavItemDef = { to: '/admin', label: 'Administration',  icon: Settings,   exact: false };
-const AUDIT_NAV: NavItemDef = { to: '/audit', label: 'Audit & Activity', icon: ScrollText, exact: false };
+const ADMIN_NAV: NavItemDef = { to: '/admin', label: 'Administration',     icon: Settings,   exact: false };
+const AUDIT_NAV: NavItemDef = { to: '/audit', label: 'Audit & Activity',   icon: ScrollText, exact: false };
+
+const SIDEBAR_MIN = 240;
+const SIDEBAR_MAX = 460;       // hard ceiling / fallback before content is measured
+const SIDEBAR_DEFAULT = 280;
+const SIDEBAR_LEFT_INSET = 16; // matches the p-4 padding around the floating sidebar
 
 const COUNTRY_LABELS: Record<string, string> = {
   ALL: 'West Africa Region',
@@ -35,11 +47,14 @@ const COUNTRY_LABELS: Record<string, string> = {
 
 const BREADCRUMB_LABELS: Record<string, string> = {
   '/':             'Executive Dashboard',
-  '/agreements':   'Contract & Agreement Registry',
-  '/performance':  'Operator Performance & Compliance',
-  '/risk':         'Breach & Risk Detection',
-  '/transparency': 'Transparency & EITI Reporting',
-  '/negotiation':  'Negotiation Intelligence',
+  '/agreements':   'Module 1 · Contract & Agreement Intelligence',
+  '/negotiation':  'Module 2 · Negotiation Intelligence',
+  '/performance':  'Module 3 · Performance & Compliance Monitoring',
+  '/risk':         'Module 4 · Breach & Risk Detection',
+  '/transparency': 'Module 5 · Transparency & Reporting',
+  '/scenarios':    'Module 6 · Fiscal Scenario Modelling',
+  '/ownership':    'Module 7 · Beneficial Ownership',
+  '/local-content':'Module 8 · Local Content Auditing',
   '/admin':        'System Administration',
   '/audit':        'Audit Log & Activity Monitor',
 };
@@ -50,7 +65,7 @@ function NavItem({ item }: { item: NavItemDef }) {
       to={item.to}
       end={item.exact}
       className={({ isActive }) =>
-        'group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium border-l-[3px] transition-colors duration-150 ' +
+        'group flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-medium transition-all duration-200 border-l-[3px] ' +
         (isActive
           ? 'bg-white/[0.09] text-white border-gold-500'
           : 'text-white/65 border-transparent hover:bg-white/[0.06] hover:text-white')
@@ -58,11 +73,25 @@ function NavItem({ item }: { item: NavItemDef }) {
     >
       {({ isActive }) => (
         <>
-          <span className="flex items-center gap-3">
-            <item.icon size={15} className={'shrink-0 transition-opacity ' + (isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100')} />
-            {item.label}
+          <span className="flex items-center gap-3 min-w-0">
+            <item.icon size={15} className={'shrink-0 transition-all duration-200 ' + (isActive ? 'opacity-100 text-gold-400' : 'opacity-70 group-hover:opacity-100')} />
+            <span className="min-w-0 truncate">{item.label}</span>
           </span>
-          <ChevronRight size={11} className={isActive ? 'opacity-60' : 'opacity-25 group-hover:opacity-50'} />
+          {item.module ? (
+            <span
+              className={
+                'shrink-0 text-[9px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 rounded-full border transition-colors ' +
+                (isActive
+                  ? 'text-forest-900 border-gold-500/50 bg-gold-500'
+                  : 'text-white/40 border-white/10 bg-white/[0.04] group-hover:text-white/60')
+              }
+              aria-hidden
+            >
+              {item.module}
+            </span>
+          ) : (
+            <ChevronRight size={11} className={isActive ? 'opacity-60' : 'opacity-25 group-hover:opacity-50'} />
+          )}
         </>
       )}
     </NavLink>
@@ -72,15 +101,89 @@ function NavItem({ item }: { item: NavItemDef }) {
 export function Layout() {
   const { selectedCountry } = useCountry();
   const logout   = useAuthStore((state) => state.logout);
+  const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { isAdmin } = useRole();
   const [now, setNow] = useState(new Date());
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+  const [maxWidth, setMaxWidth] = useState(SIDEBAR_MAX);
+  const [isResizing, setIsResizing] = useState(false);
+  const draggingRef = useRef(false);
+  const maxWidthRef = useRef(SIDEBAR_MAX);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Measure the natural width of the navigation so the sidebar can never be
+  // dragged wider than the point at which the longest label is fully visible.
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const clone = nav.cloneNode(true) as HTMLElement;
+    Object.assign(clone.style, {
+      position: 'absolute', left: '-9999px', top: '0',
+      visibility: 'hidden', width: 'max-content', maxWidth: 'none',
+      height: 'auto', overflow: 'visible',
+    });
+    // Let every truncated label expand to its full text for the measurement.
+    clone.querySelectorAll<HTMLElement>('.truncate').forEach((el) => {
+      el.style.overflow = 'visible';
+      el.style.textOverflow = 'clip';
+      el.style.whiteSpace = 'nowrap';
+    });
+    document.body.appendChild(clone);
+    const needed = clone.scrollWidth;
+    document.body.removeChild(clone);
+    // +16 leaves room for the vertical scrollbar gutter so text never re-truncates.
+    const measured = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_DEFAULT, Math.ceil(needed) + 16));
+    maxWidthRef.current = measured;
+    setMaxWidth(measured);
+  }, [isAdmin]);
+
+  // Never leave the sidebar wider than the measured content cap.
+  useEffect(() => {
+    setSidebarWidth((w) => Math.min(w, maxWidth));
+  }, [maxWidth]);
+
+  useEffect(() => {
+    let raf = 0;
+    let lastX = 0;
+    const onMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return;
+      lastX = e.clientX;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setSidebarWidth(Math.min(maxWidthRef.current, Math.max(SIDEBAR_MIN, lastX - SIDEBAR_LEFT_INSET)));
+      });
+    };
+    const onUp = () => {
+      if (!draggingRef.current) return;
+      draggingRef.current = false;
+      setIsResizing(false);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    setIsResizing(true);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  };
 
   const formatTime = (date: Date, countryId: string) => {
     const day   = String(date.getDate()).padStart(2, '0');
@@ -103,144 +206,196 @@ export function Layout() {
   const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-canvas">
+    <div className="flex h-screen overflow-hidden bg-background">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:px-4 focus:py-2 focus:rounded-lg focus:bg-forest-900 focus:text-white focus:text-sm focus:font-semibold focus:shadow-pop"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-5 focus:py-2.5 focus:rounded-xl focus:bg-primary focus:text-primary-foreground focus:text-sm focus:font-bold focus:shadow-pop"
       >
         Skip to main content
       </a>
 
-      {/* ── Sidebar ──────────────────────────────────────── */}
-      <aside className="w-64 flex flex-col shrink-0 z-20 relative bg-forest-900 shadow-[4px_0_28px_rgba(0,0,0,0.20)]">
-        {/* Single restrained static highlight */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(600px circle at 80% 0%, rgba(1,105,64,0.16), transparent 55%)' }}
-        />
-        {/* Static thin gold rule */}
-        <div className="h-[2px] w-full shrink-0 bg-gold-500/80 relative z-10" />
+      {/* ── Floating Sidebar — original forest/gold palette ────────────── */}
+      <div className="h-full p-4 pr-0 shrink-0 flex items-center relative z-20">
+        <aside
+          className={
+            'h-full flex flex-col rounded-3xl overflow-hidden shadow-lg relative ' +
+            (isResizing ? '' : 'transition-[width] duration-300 ease-out')
+          }
+          style={{ width: sidebarWidth, background: '#011F14' }}
+        >
+          {/* Subtle radial glow */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ backgroundImage: 'radial-gradient(600px circle at 80% 0%, rgba(1,105,64,0.16), transparent 55%)' }}
+          />
+          {/* Top gold rule */}
+          <div className="h-[2px] w-full shrink-0 bg-gold-500/80 relative z-10" />
 
-        {/* Ministry identity */}
-        <div className="px-5 pt-5 pb-4 relative z-10 border-b border-white/[0.08]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gold-500 shadow-sm">
-              <span className="font-extrabold text-[11px] tracking-tight text-forest-900">MoM</span>
+          {/* Drag handle */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            onMouseDown={startResize}
+            onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT)}
+            title="Drag to resize · double-click to reset"
+            className="absolute top-0 -right-2 z-30 h-full w-4 cursor-col-resize bg-transparent group flex items-center justify-center"
+          >
+            <div className="h-12 w-[3px] rounded-full bg-white/10 group-hover:bg-gold-500/50 transition-colors" />
+          </div>
+
+          {/* Ministry identity */}
+          <div className="px-5 pt-5 pb-4 relative z-10 border-b border-white/[0.08]">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gold-500 shadow-sm">
+                <span className="font-extrabold text-[11px] tracking-tight" style={{ color: '#011F14' }}>MoM</span>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] leading-none text-gold-500">
+                  Ministries of Mining
+                </div>
+                <div className="text-[10px] tracking-wide leading-none mt-1.5 text-white/45">
+                  West Africa
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] leading-none text-gold-500">
-                Ministries of Mining
-              </div>
-              <div className="text-[10px] tracking-wide leading-none mt-1.5 text-white/45">
-                West Africa
-              </div>
+            <div className="text-[11px] font-semibold leading-snug mb-2.5 text-white/80">
+              National Compliance Intelligence Platform
+            </div>
+            <div className="text-[10px] font-mono px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 text-white/60 bg-white/[0.06] border border-white/[0.10]">
+              <span className="w-1 h-1 rounded-full pulse-live bg-emerald-400" />
+              {COUNTRY_LABELS[selectedCountry]}
             </div>
           </div>
-          <div className="text-[11px] font-semibold leading-snug mb-2.5 text-white/80">
-            National Compliance Intelligence Platform
-          </div>
-          <div className="text-[10px] font-mono px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 text-white/60 bg-white/[0.06] border border-white/[0.10]">
-            <span className="w-1 h-1 rounded-full pulse-live bg-emerald-400" />
-            {COUNTRY_LABELS[selectedCountry]}
-          </div>
-        </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto relative z-10" aria-label="Primary">
-          <div className="px-2 pb-1.5 pt-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Modules</span>
-          </div>
+          {/* Navigation */}
+          <nav ref={navRef} className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto relative z-10" aria-label="Primary">
+            <div className="px-2 pb-1.5 pt-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Modules</span>
+            </div>
 
-          {NAV_ITEMS.map((item) => <NavItem key={item.to} item={item} />)}
+            {NAV_ITEMS.map((item) => <NavItem key={item.to} item={item} />)}
 
-          {isAdmin && (
-            <>
-              <div className="mx-2 my-3 h-px bg-white/[0.08]" />
-              <div className="px-2 pb-1.5">
-                <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">System</span>
-              </div>
-              {[ADMIN_NAV, AUDIT_NAV].map((item) => <NavItem key={item.to} item={item} />)}
-            </>
-          )}
-        </nav>
+            {isAdmin && (
+              <>
+                <div className="mx-2 my-3 h-px bg-white/[0.08]" />
+                <div className="px-2 pb-1.5">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">System</span>
+                </div>
+                {[ADMIN_NAV, AUDIT_NAV].map((item) => <NavItem key={item.to} item={item} />)}
+              </>
+            )}
+          </nav>
 
-        {/* Sidebar footer */}
-        <div className="px-4 py-4 space-y-2 relative z-10 border-t border-white/[0.08]">
-          <div className="flex items-center gap-2 text-white/45">
-            <Clock size={10} className="shrink-0" />
-            <span className="text-[10px] font-mono tabular-nums leading-none">
-              {formatTime(now, selectedCountry)}
-            </span>
+          {/* Sidebar footer */}
+          <div className="px-4 py-4 space-y-2 relative z-10 border-t border-white/[0.08]">
+            <div className="flex items-center gap-2 text-white/45">
+              <Clock size={10} className="shrink-0" />
+              <span className="text-[10px] font-mono tabular-nums leading-none">
+                {formatTime(now, selectedCountry)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-white/30">
+              <Activity size={9} className="shrink-0" />
+              <span className="text-[9px] tracking-wide">PEB-0526 · Secure Government Platform</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-white/30">
-            <Activity size={9} className="shrink-0" />
-            <span className="text-[9px] tracking-wide">PEB-0526 · Secure Government Platform</span>
-          </div>
-        </div>
-      </aside>
+        </aside>
+      </div>
 
       {/* ── Main content area ─────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 relative">
 
-        {/* Header */}
-        <header className="sticky top-0 z-10 px-6 flex items-center justify-between shrink-0 h-14 glass border-b border-line shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="w-0.5 h-6 rounded-full shrink-0 bg-gold-500" />
-            <div>
-              <div className="text-[13px] font-bold tracking-snugger text-ink">Ministries of Mining</div>
-              <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-ink-4">
-                National Compliance Intelligence Platform
+        {/* Floating Header */}
+        <div className="pt-4 px-6 pb-2 shrink-0 z-40 sticky top-0">
+          <header className="app-header flex items-center justify-between h-16 px-6 glass-card !overflow-visible shadow-sm border border-line-soft rounded-2xl">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                 <Shield size={16} className="text-primary" />
+              </div>
+              <div className="header-title-text min-w-0 overflow-hidden">
+                <div className="text-[14px] font-bold tracking-tight text-foreground truncate">Platform Dashboard</div>
+                <div className="header-subtitle text-[11px] font-medium text-ink-4 truncate">
+                  Adaptive Continuous Compliance Intelligence
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <GlobalSearch />
-            <span className="w-px h-5 bg-line" />
-            <CountrySelector />
-            <span className="w-px h-5 bg-line" />
-            <NotificationPanel />
-            <span className="w-px h-5 bg-line" />
+            <div className="flex items-center gap-2 lg:gap-3 shrink-0">
+              <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
+                <GlobalSearch />
+                <span className="w-px h-6 bg-line-strong shrink-0" />
+                <CountrySelector />
+                <span className="w-px h-6 bg-line-strong shrink-0" />
+                <AIAssistant />
+                <span className="w-px h-6 bg-line-strong shrink-0" />
+                <NotificationPanel />
+              </div>
 
-            <div className="flex items-center gap-2.5">
-              <span
-                className={
-                  'text-[10px] font-bold px-2.5 py-1 rounded-lg border tracking-[0.1em] uppercase ' +
-                  (isAdmin
-                    ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                    : 'bg-surface-2 text-ink-3 border-line')
-                }
-              >
-                {isAdmin ? 'Admin' : 'Read-Only'}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg border border-transparent text-ink-3 transition-colors hover:bg-surface-2 hover:border-line hover:text-ink"
-              >
-                <LogOut size={13} />
-                Sign Out
-              </button>
+              <div className="flex items-center gap-2 lg:gap-3 pl-2 lg:pl-4 border-l border-line-strong shrink-0">
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-2 border border-line-soft text-ink-3 transition-all hover:bg-foreground/10 hover:text-foreground group shrink-0"
+                  aria-label="Toggle Theme"
+                >
+                  {theme === 'dark' ? (
+                    <Sun size={16} className="shrink-0 transition-transform group-hover:rotate-45" />
+                  ) : (
+                    <Moon size={16} className="shrink-0 transition-transform group-hover:-rotate-12" />
+                  )}
+                </button>
+                <span
+                  className={
+                    'header-role text-[10px] font-bold px-3 py-1.5 rounded-xl border tracking-[0.1em] uppercase whitespace-nowrap transition-colors hidden sm:inline-block shrink-0 ' +
+                    (isAdmin
+                      ? 'bg-primary/20 text-primary border-primary/30'
+                      : 'bg-surface-2 text-ink-4 border-line-soft')
+                  }
+                >
+                  {isAdmin ? 'Admin' : 'Read-Only'}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-2 border border-line-soft text-ink-3 transition-all hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive group shrink-0"
+                  aria-label="Sign Out"
+                >
+                  <LogOut size={16} className="shrink-0 transition-transform group-hover:scale-110" />
+                </button>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        </div>
 
         {/* Breadcrumb bar */}
-        <div className="px-6 py-2 flex items-center gap-2.5 shrink-0 bg-surface-2/70 border-b border-line-soft">
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-ink-4">Section</span>
-          <ChevronRight size={9} className="text-line-strong" />
-          <span className="text-[11px] font-semibold text-ink-2">{getBreadcrumb()}</span>
-          <span className="mx-1 text-[10px] text-line-strong">|</span>
-          <span className="text-[10px] font-medium text-ink-4">{COUNTRY_LABELS[selectedCountry]}</span>
-          <span className="ml-auto text-[9px] font-mono font-bold uppercase tracking-[0.16em] text-ink-4">
-            Classification: Restricted — Government Use Only
+        <div className="px-8 py-1 flex items-center gap-3 shrink-0 overflow-hidden">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-4 shrink-0">Section</span>
+          <ChevronRight size={10} className="text-line-strong shrink-0" />
+          <span className="text-[12px] font-semibold text-foreground tracking-wide truncate min-w-0">{getBreadcrumb()}</span>
+          <span className="mx-2 text-[12px] text-line-strong opacity-50 shrink-0">|</span>
+          <span className="text-[11px] font-medium text-primary shrink-0 whitespace-nowrap">{COUNTRY_LABELS[selectedCountry]}</span>
+          <span className="ml-auto flex items-center gap-2">
+             <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+             <span className="text-[10px] font-mono font-medium uppercase tracking-[0.15em] text-ink-4">
+              Restricted — Government Use Only
+            </span>
           </span>
         </div>
 
         {/* Page content */}
-        <main id="main-content" className="flex-1 overflow-y-auto p-6 fade-in">
-          <Outlet />
+        <main
+          id="main-content"
+          className="flex-1 overflow-y-auto p-6 pt-4 fade-in"
+          data-ai-region={getBreadcrumb().toLowerCase().replace(/\s+/g, '-')}
+        >
+          <div className="max-w-7xl mx-auto">
+             <Outlet />
+          </div>
         </main>
       </div>
+
+      {/* Global AI surface — right-click anywhere to invoke. */}
+      <AIContextMenu />
+      <AIBriefingPopover />
     </div>
   );
 }

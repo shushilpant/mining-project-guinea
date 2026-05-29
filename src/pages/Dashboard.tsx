@@ -4,9 +4,11 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
+import type { LucideIcon } from 'lucide-react';
 import {
   FileText, Users, AlertTriangle, TrendingUp, Shield,
   Calendar, Activity, ChevronRight, Clock, ArrowUpRight,
+  AlertOctagon, AlertCircle, ShieldAlert, FileBarChart2,
 } from 'lucide-react';
 import { useCountry } from '@/context/CountryContext';
 import { useDataStore } from '@/store/dataStore';
@@ -18,19 +20,35 @@ import {
 import { MetricCard } from '@/components/shared/MetricCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CountryMap } from '@/components/shared/CountryMap';
+import { MorningBriefStrip } from '@/components/shared/MorningBriefStrip';
 import { formatDate } from '@/lib/utils';
 import type { RiskFlag } from '@/data/types';
 
 const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
 const COMPLIANCE_COLORS = {
-  met:       '#059669',
-  'on-track':'#2563eb',
-  'at-risk': '#d97706',
-  breached:  '#dc2626',
+  met:       '#10B981', // Emerald 500
+  'on-track':'#3B82F6', // Blue 500
+  'at-risk': '#F59E0B', // Amber 500
+  breached:  '#EF4444', // Red 500
 };
 
-function buildActivityFeed(countryId?: string): { id: string; icon: string; text: string; time: string; type: 'alert' | 'update' | 'info' }[] {
+type ActivityType = 'alert' | 'update' | 'info';
+interface ActivityEvent {
+  id: string;
+  Icon: LucideIcon;
+  text: string;
+  time: string;
+  type: ActivityType;
+}
+
+const ACTIVITY_TYPE_LABEL: Record<ActivityType, string> = {
+  alert:  'Alert',
+  update: 'Update',
+  info:   'Info',
+};
+
+function buildActivityFeed(countryId?: string): ActivityEvent[] {
   const flags = getRiskFlags(countryId)
     .filter(f => f.status !== 'resolved')
     .sort((a, b) => b.triggeredDate.localeCompare(a.triggeredDate))
@@ -40,13 +58,13 @@ function buildActivityFeed(countryId?: string): { id: string; icon: string; text
     .filter(c => c.status === 'breached' || c.status === 'at-risk')
     .slice(0, 2);
 
-  const events: { id: string; icon: string; text: string; time: string; type: 'alert' | 'update' | 'info' }[] = [];
+  const events: ActivityEvent[] = [];
 
   flags.forEach(f => {
     const op = getOperatorById(f.operatorId);
     events.push({
       id: `flag-${f.id}`,
-      icon: f.severity === 'critical' ? '🚨' : '⚠️',
+      Icon: f.severity === 'critical' ? AlertOctagon : AlertTriangle,
       text: `${f.severity === 'critical' ? 'Critical' : 'High'} flag raised — ${op?.name ?? 'Unknown'}: ${f.category}`,
       time: formatDate(f.triggeredDate),
       type: f.severity === 'critical' ? 'alert' : 'update',
@@ -56,7 +74,7 @@ function buildActivityFeed(countryId?: string): { id: string; icon: string; text
   commitments.forEach(c => {
     events.push({
       id: `cmt-${c.id}`,
-      icon: c.status === 'breached' ? '🔴' : '🟡',
+      Icon: c.status === 'breached' ? ShieldAlert : AlertCircle,
       text: `Commitment ${c.status === 'breached' ? 'breached' : 'at risk'}: ${c.description.slice(0, 60)}…`,
       time: 'Recent',
       type: c.status === 'breached' ? 'alert' : 'update',
@@ -65,7 +83,7 @@ function buildActivityFeed(countryId?: string): { id: string; icon: string; text
 
   events.push({
     id: 'sys-1',
-    icon: '📊',
+    Icon: FileBarChart2,
     text: 'Compliance trend report auto-generated — Q2 2024',
     time: '2024-06-01',
     type: 'info',
@@ -100,19 +118,15 @@ const ComplianceTip = ({ active, payload, label }: { active?: boolean; payload?:
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="px-3.5 py-2.5 rounded-xl shadow-xl text-xs"
-      style={{
-        background: 'rgba(1,31,20,0.92)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(200,153,30,0.35)',
-        color: '#fff',
-      }}
+      className="px-4 py-3 rounded-xl shadow-pop text-sm backdrop-blur-xl relative overflow-hidden"
+      style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
     >
-      <div className="font-mono text-[10px] mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>{label}</div>
-      <div className="font-bold text-[18px] tabular-nums" style={{ color: '#C8991E', letterSpacing: '-0.02em' }}>
+      <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full" />
+      <div className="font-mono text-[11px] mb-1.5 text-ink-4 relative z-10">{label}</div>
+      <div className="font-bold text-[22px] tabular-nums text-primary relative z-10 tracking-tight leading-none mb-1">
         {payload[0].value}%
       </div>
-      <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.45)' }}>Compliance Rate</div>
+      <div className="text-[11px] text-ink-3 relative z-10 font-medium">Compliance Rate</div>
     </div>
   );
 };
@@ -120,14 +134,14 @@ const ComplianceTip = ({ active, payload, label }: { active?: boolean; payload?:
 /* ── Shared panel wrapper ─────────────────────────── */
 function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={`bg-surface rounded-2xl overflow-hidden border border-line shadow-card ${className}`}>
+    <section className={`glass-card flex flex-col ${className}`}>
       {children}
     </section>
   );
 }
 
 function PanelHeader({
-  title, subtitle, actions, accent = '#016940'
+  title, subtitle, actions, accent = '#10B981'
 }: {
   title: string;
   subtitle?: string;
@@ -135,12 +149,12 @@ function PanelHeader({
   accent?: string;
 }) {
   return (
-    <div className="px-5 py-3.5 flex items-center justify-between bg-surface-2 border-b border-line">
-      <div className="flex items-center gap-2.5">
-        <span className="w-0.5 h-4 rounded-full" style={{ background: accent }} aria-hidden />
+    <div className="px-6 py-5 flex items-center justify-between border-b border-line-soft bg-foreground/[0.01]">
+      <div className="flex items-center gap-3">
+        <span className="w-1 h-5 rounded-full shadow-glow" style={{ background: accent }} aria-hidden />
         <div>
-          <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-ink">{title}</h2>
-          {subtitle && <p className="text-[11px] mt-0.5 text-ink-4">{subtitle}</p>}
+          <h2 className="text-[14px] font-bold tracking-wide text-foreground">{title}</h2>
+          {subtitle && <p className="text-[12px] mt-0.5 text-ink-4 font-medium">{subtitle}</p>}
         </div>
       </div>
       {actions}
@@ -190,72 +204,83 @@ export function Dashboard() {
   const totalCommitmentsCount = complianceDist.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+
+      {/* ── AI Morning Brief — proactive 3-line situational read ─── */}
+      <MorningBriefStrip />
 
       {/* ── Metric cards ─────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <MetricCard
-          label="Active Agreements"
-          value={metrics.totalActiveAgreements}
-          icon={<FileText size={16} />}
-          accent="blue"
-          onClick={() => navigate('/agreements')}
-        />
-        <MetricCard
-          label="Operators Monitored"
-          value={metrics.totalOperators}
-          icon={<Users size={16} />}
-          accent="default"
-          onClick={() => navigate('/performance')}
-        />
-        <MetricCard
-          label="Compliance Rate"
-          value={`${metrics.systemComplianceRate}%`}
-          sub={`${metrics.totalCommitments} commitments tracked`}
-          icon={<Shield size={16} />}
-          accent={metrics.systemComplianceRate >= 70 ? 'green' : 'amber'}
-        />
-        <MetricCard
-          label="Critical Flags"
-          value={metrics.openCriticalFlags}
-          sub={`${metrics.openHighFlags} high severity open`}
-          icon={<AlertTriangle size={16} />}
-          accent={metrics.openCriticalFlags > 0 ? 'red' : 'green'}
-          onClick={() => navigate('/risk')}
-        />
-        <MetricCard
-          label="Breached Commitments"
-          value={metrics.breachedCommitments}
-          sub={`${metrics.atRiskCommitments} at-risk`}
-          icon={<TrendingUp size={16} />}
-          accent={metrics.breachedCommitments > 0 ? 'amber' : 'green'}
-          onClick={() => navigate('/performance')}
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-5" data-ai-region="executive-kpis">
+        <div data-ai-entity="metric:active-agreements" data-ai-label="Active agreements" data-ai-sub={`${metrics.totalActiveAgreements} active in scope`}>
+          <MetricCard
+            label="Active Agreements"
+            value={metrics.totalActiveAgreements}
+            icon={<FileText size={18} />}
+            accent="blue"
+            onClick={() => navigate('/agreements')}
+          />
+        </div>
+        <div data-ai-entity="metric:operators" data-ai-label="Operators monitored" data-ai-sub={`${metrics.totalOperators} operators in scope`}>
+          <MetricCard
+            label="Operators Monitored"
+            value={metrics.totalOperators}
+            icon={<Users size={18} />}
+            accent="default"
+            onClick={() => navigate('/performance')}
+          />
+        </div>
+        <div data-ai-entity="metric:compliance-rate" data-ai-label="System compliance rate" data-ai-sub={`${metrics.systemComplianceRate}% across ${metrics.totalCommitments} commitments`}>
+          <MetricCard
+            label="Compliance Rate"
+            value={`${metrics.systemComplianceRate}%`}
+            sub={`${metrics.totalCommitments} commitments tracked`}
+            icon={<Shield size={18} />}
+            accent={metrics.systemComplianceRate >= 70 ? 'green' : 'amber'}
+            onClick={() => navigate('/performance')}
+          />
+        </div>
+        <div data-ai-entity="metric:critical-flags" data-ai-label="Critical flags" data-ai-sub={`${metrics.openCriticalFlags} critical · ${metrics.openHighFlags} high`}>
+          <MetricCard
+            label="Critical Flags"
+            value={metrics.openCriticalFlags}
+            sub={`${metrics.openHighFlags} high severity`}
+            icon={<AlertTriangle size={18} />}
+            accent={metrics.openCriticalFlags > 0 ? 'red' : 'green'}
+            onClick={() => navigate('/risk')}
+          />
+        </div>
+        <div data-ai-entity="metric:breached-commitments" data-ai-label="Breached commitments" data-ai-sub={`${metrics.breachedCommitments} breached · ${metrics.atRiskCommitments} at-risk`}>
+          <MetricCard
+            label="Breached Commitments"
+            value={metrics.breachedCommitments}
+            sub={`${metrics.atRiskCommitments} at-risk`}
+            icon={<TrendingUp size={18} />}
+            accent={metrics.breachedCommitments > 0 ? 'amber' : 'green'}
+            onClick={() => navigate('/performance')}
+          />
+        </div>
       </div>
 
       {/* ── Map + Trend chart ────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         <Panel className="lg:col-span-3">
           <PanelHeader
             title="Operator & Mine Locations"
             subtitle="Colour indicates operator compliance status"
           />
-          <div className="h-72">
+          <div className="flex-1 min-h-[300px] relative">
             <CountryMap countryId={countryId} />
           </div>
-          <div
-            className="px-4 py-2 flex items-center gap-4 flex-wrap"
-            style={{ borderTop: '1px solid rgba(210,218,204,0.6)', background: 'rgba(245,248,242,0.8)' }}
-          >
+          <div className="px-6 py-3 flex items-center gap-5 flex-wrap border-t border-line-soft bg-surface">
             {[
-              { label: 'Met',      color: '#059669' },
-              { label: 'On Track', color: '#2563eb' },
-              { label: 'At Risk',  color: '#f59e0b' },
-              { label: 'Breached', color: '#ef4444' },
+              { label: 'Met',      color: '#10B981' },
+              { label: 'On Track', color: '#3B82F6' },
+              { label: 'At Risk',  color: '#F59E0B' },
+              { label: 'Breached', color: '#EF4444' },
             ].map(s => (
-              <div key={s.label} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                <span className="text-[11px] font-medium" style={{ color: '#5A7A6A' }}>{s.label}</span>
+              <div key={s.label} className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ background: s.color, boxShadow: `0 0 8px ${s.color}80` }} />
+                <span className="text-[12px] font-medium text-ink-3">{s.label}</span>
               </div>
             ))}
           </div>
@@ -265,31 +290,31 @@ export function Dashboard() {
           <PanelHeader
             title="System Compliance Trend"
             subtitle="% commitments on-track or met by period"
-            accent="#C8991E"
+            accent="#F59E0B"
           />
           <div
-            className="p-4 h-72"
+            className="p-5 flex-1 min-h-[300px]"
             role="img"
-            aria-label={`Compliance trend over ${trendData.length} periods, ranging ${Math.min(...trendData.map(d => d.rate))}% to ${Math.max(...trendData.map(d => d.rate))}%.`}
+            aria-label={`Compliance trend over ${trendData.length} periods.`}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+              <AreaChart data={trendData} margin={{ top: 10, right: 10, bottom: 0, left: -16 }}>
                 <defs>
                   <linearGradient id="compGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"  stopColor="#016940" stopOpacity={0.32} />
-                    <stop offset="85%" stopColor="#016940" stopOpacity={0.02} />
+                    <stop offset="0%"  stopColor="#10B981" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EBF0E6" vertical={false} />
+                <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="period"
-                  tick={{ fontSize: 10, fill: '#8FA88A' }}
+                  tick={{ fontSize: 11, fill: '#71717A', fontWeight: 500 }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={v => v.replace('-', '\n')}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: '#8FA88A' }}
+                  tick={{ fontSize: 11, fill: '#71717A', fontWeight: 500 }}
                   tickLine={false}
                   axisLine={false}
                   domain={[50, 100]}
@@ -299,11 +324,11 @@ export function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="rate"
-                  stroke="#016940"
-                  strokeWidth={2.5}
+                  stroke="#10B981"
+                  strokeWidth={3}
                   fill="url(#compGrad)"
-                  dot={{ r: 3.5, fill: '#016940', strokeWidth: 0 }}
-                  activeDot={{ r: 5.5, fill: '#fff', stroke: '#016940', strokeWidth: 2 }}
+                  dot={{ r: 4, fill: 'var(--card)', stroke: '#10B981', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: 'var(--card)', stroke: '#10B981', strokeWidth: 3 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -312,31 +337,30 @@ export function Dashboard() {
       </div>
 
       {/* ── Donut + Country Overview + Risk Flags ─────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
         {/* Left: Donut + Country Overview */}
         <Panel className="lg:col-span-2">
           <PanelHeader
-            title="Commitment Status Distribution"
+            title="Commitment Distribution"
             subtitle={`Breakdown of ${totalCommitmentsCount} active commitments`}
-            accent="#C8991E"
+            accent="#3B82F6"
           />
-          <div className="p-5 flex items-center gap-5">
+          <div className="p-6 flex items-center gap-6">
             <div
-              className="relative shrink-0"
-              style={{ width: 120, height: 120 }}
-              role="img"
-              aria-label={`Commitment status: ${complianceDist.map(d => `${d.value} ${d.name}`).join(', ')}. ${metrics.systemComplianceRate}% compliant overall.`}
+              className="relative shrink-0 drop-shadow-md"
+              style={{ width: 140, height: 140 }}
             >
-              <ResponsiveContainer width={120} height={120}>
+              <ResponsiveContainer width={140} height={140}>
                 <PieChart>
                   <Pie
                     data={complianceDist}
                     cx="50%"
                     cy="50%"
-                    innerRadius={38}
-                    outerRadius={54}
-                    paddingAngle={3}
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={4}
+                    cornerRadius={4}
                     dataKey="value"
                     strokeWidth={0}
                   >
@@ -347,68 +371,64 @@ export function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[19px] font-bold tabular-nums" style={{ color: '#012C1D', letterSpacing: '-0.03em' }}>
+                <span className="text-[24px] font-bold tabular-nums text-foreground tracking-tight leading-none mb-1">
                   {metrics.systemComplianceRate}%
                 </span>
-                <span className="text-[8px] font-bold uppercase tracking-[0.16em]" style={{ color: '#8FA88A' }}>
+                <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-ink-4">
                   Compliant
                 </span>
               </div>
             </div>
-            <div className="flex-1 space-y-2.5">
+            <div className="flex-1 space-y-3">
               {complianceDist.map(d => (
-                <div key={d.name} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: d.color }} />
-                    <span className="text-[12px]" style={{ color: '#4A6B58' }}>{d.name}</span>
+                <div key={d.name} className="flex items-center justify-between gap-3 group">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3 h-3 rounded-[3px] shrink-0" style={{ background: d.color, boxShadow: `0 0 10px ${d.color}80` }} />
+                    <span className="text-[13px] font-medium text-ink-2 group-hover:text-foreground transition-colors">{d.name}</span>
                   </div>
-                  <span className="text-[12px] font-bold tabular-nums" style={{ color: '#012C1D' }}>{d.value}</span>
+                  <span className="text-[13px] font-bold tabular-nums text-foreground">{d.value}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Country overview */}
-          <div style={{ borderTop: '1px solid rgba(210,218,204,0.7)' }}>
-            <PanelHeader title="Country Overview" />
-            <div className="divide-y" style={{ borderColor: 'rgba(210,218,204,0.5)' }}>
+          <div className="border-t border-line-soft bg-surface">
+            <PanelHeader title="Country Overview" accent="#8B5CF6" />
+            <div className="divide-y divide-line-soft">
               {countrySummaries.map(cs => (
-                <div key={cs.countryId} className="px-5 py-3.5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[12px] font-semibold" style={{ color: '#012C1D' }}>{cs.countryName}</span>
+                <div key={cs.countryId} className="px-6 py-4 hover:bg-foreground/[0.02] transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[14px] font-bold text-foreground tracking-wide">{cs.countryName}</span>
                     <span
-                      className="text-[13px] font-bold tabular-nums"
-                      style={{ color: cs.complianceRate >= 70 ? '#059669' : '#D97706', letterSpacing: '-0.01em' }}
+                      className="text-[15px] font-bold tabular-nums"
+                      style={{ color: cs.complianceRate >= 70 ? '#10B981' : '#F59E0B' }}
                     >
                       {cs.complianceRate}%
                     </span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-[11px] mb-2" style={{ color: '#7A9A88' }}>
+                  <div className="flex items-center gap-3 text-[12px] font-medium mb-3 text-ink-4">
                     <span>{cs.activeAgreements} agreements</span>
-                    <span>·</span>
+                    <span className="w-1 h-1 rounded-full bg-ink-4 opacity-50" />
                     <span>{cs.totalOperators} operators</span>
                     {cs.openCriticalFlags > 0 && (
-                      <span
-                        className="font-bold px-1.5 py-0.5 rounded-md"
-                        style={{ color: '#DC2626', background: 'rgba(220,38,38,0.08)' }}
-                      >
-                        {cs.openCriticalFlags} critical
-                      </span>
+                      <>
+                        <span className="w-1 h-1 rounded-full bg-ink-4 opacity-50" />
+                        <span className="font-bold px-2 py-0.5 rounded-lg text-destructive bg-destructive/10 border border-destructive/20">
+                          {cs.openCriticalFlags} critical
+                        </span>
+                      </>
                     )}
                   </div>
                   <div
-                    className="h-1.5 rounded-full overflow-hidden bg-canvas"
+                    className="h-2 rounded-full overflow-hidden bg-background border border-line-soft shadow-inner"
                     role="progressbar"
-                    aria-valuenow={cs.complianceRate}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${cs.countryName} compliance rate`}
                   >
                     <div
-                      className="h-full rounded-full transition-all duration-700"
+                      className="h-full rounded-full transition-all duration-700 shadow-glow"
                       style={{
                         width: `${cs.complianceRate}%`,
-                        background: cs.complianceRate >= 70 ? '#047857' : '#B45309',
+                        background: cs.complianceRate >= 70 ? 'linear-gradient(90deg, #059669, #34d399)' : 'linear-gradient(90deg, #d97706, #fbbf24)',
                       }}
                     />
                   </div>
@@ -423,19 +443,19 @@ export function Dashboard() {
           <PanelHeader
             title="Priority Risk Flags"
             subtitle="Sorted by severity — click to investigate"
-            accent="#DC2626"
+            accent="#EF4444"
             actions={
               <button
                 onClick={() => navigate('/risk')}
-                className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg text-brand-600 bg-brand-600/[0.07] border border-brand-600/15 transition-colors hover:bg-brand-600/[0.14]"
+                className="group flex items-center gap-1.5 text-[12px] font-bold px-3.5 py-1.5 rounded-xl text-foreground bg-foreground/5 border border-foreground/10 transition-all hover:bg-foreground/10 hover:border-foreground/20"
               >
-                View all <ArrowUpRight size={12} />
+                View all <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
             }
           />
-          <div className="divide-y max-h-[420px] overflow-y-auto" style={{ borderColor: 'rgba(210,218,204,0.5)' }}>
+          <div className="divide-y divide-line-soft max-h-[500px] overflow-y-auto slim-scrollbar">
             {topFlags.length === 0 && (
-              <div role="status" className="px-5 py-10 text-center text-sm text-ink-4">
+              <div role="status" className="px-6 py-12 text-center text-[13px] text-ink-4 font-medium">
                 No open flags
               </div>
             )}
@@ -452,75 +472,75 @@ export function Dashboard() {
       </div>
 
       {/* ── Upcoming Deadlines + Activity Feed ──────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
         {/* Upcoming deadlines */}
         <Panel className="lg:col-span-3">
           <PanelHeader
             title="Active Commitment Tracking"
             subtitle="Breached & at-risk first · Click to view scorecard"
-            accent="#D97706"
-            actions={<Calendar size={13} style={{ color: '#8FA88A' }} />}
+            accent="#F59E0B"
+            actions={<Calendar size={16} className="text-ink-4" />}
           />
-          <div className="divide-y" style={{ borderColor: 'rgba(210,218,204,0.5)' }}>
+          <div className="divide-y divide-line-soft">
             {deadlines.length === 0 ? (
-              <div role="status" className="px-5 py-8 text-center text-sm text-ink-4">
+              <div role="status" className="px-6 py-10 text-center text-[13px] text-ink-4 font-medium">
                 No active commitments
               </div>
             ) : (
               deadlines.map((d) => {
                 const isOverdue = d.daysLeft < 0;
-                const pillColor  = d.status === 'breached' ? '#DC2626' : d.status === 'at-risk' ? '#D97706' : '#2563eb';
-                const pillBg     = d.status === 'breached' ? '#FEF2F2' : d.status === 'at-risk' ? '#FFFBEB' : '#EFF6FF';
-                const pillBorder = d.status === 'breached' ? '#FECACA' : d.status === 'at-risk' ? '#FDE68A' : '#BFDBFE';
+                const pillColor  = d.status === 'breached' ? '#EF4444' : d.status === 'at-risk' ? '#F59E0B' : '#3B82F6';
+                const pillBg     = d.status === 'breached' ? 'rgba(239, 68, 68, 0.1)' : d.status === 'at-risk' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)';
+                const pillBorder = d.status === 'breached' ? 'rgba(239, 68, 68, 0.2)' : d.status === 'at-risk' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)';
                 return (
-                <div key={d.id} className="px-5 py-3.5 flex items-center gap-4">
+                <div key={d.id} className="px-6 py-4 flex items-center gap-5 hover:bg-foreground/[0.02] transition-colors cursor-pointer card-hover">
                   {/* Days pill */}
                   <div
-                    className="shrink-0 w-14 text-center rounded-xl py-1.5"
-                    style={{ background: pillBg, border: `1.5px solid ${pillBorder}` }}
+                    className="shrink-0 w-16 text-center rounded-2xl py-2 shadow-sm"
+                    style={{ background: pillBg, border: `1px solid ${pillBorder}` }}
                   >
                     <div
-                      className="text-[13px] font-bold tabular-nums leading-none"
-                      style={{ color: pillColor, letterSpacing: '-0.02em' }}
+                      className="text-[16px] font-black tabular-nums leading-none tracking-tight"
+                      style={{ color: pillColor }}
                     >
                       {isOverdue ? `+${Math.abs(d.daysLeft)}` : d.daysLeft}
                     </div>
                     <div
-                      className="text-[8px] uppercase tracking-[0.12em] font-bold mt-0.5"
+                      className="text-[9px] uppercase tracking-[0.1em] font-bold mt-1"
                       style={{ color: pillColor }}
                     >
                       {isOverdue ? 'overdue' : 'days'}
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[12px] font-medium leading-snug" style={{ color: '#012C1D' }}>
-                      {d.description.length > 64 ? d.description.slice(0, 64) + '…' : d.description}
+                    <div className="text-[14px] font-semibold leading-snug truncate text-foreground" title={d.description}>
+                      {d.description}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5 text-[11px]" style={{ color: '#8FA88A' }}>
-                      <span>{d.operatorName}</span>
-                      <span>·</span>
-                      <span className="capitalize">{d.type.replace('-', ' ')}</span>
-                      <span>·</span>
-                      <span>{new Date(d.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    <div className="flex items-center gap-2 mt-1 text-[12px] font-medium text-ink-4 min-w-0">
+                      <span className="truncate min-w-0">{d.operatorName}</span>
+                      <span className="shrink-0 ml-auto flex items-center gap-2">
+                        <span className="capitalize">{d.type.replace('-', ' ')}</span>
+                        <span className="w-1 h-1 rounded-full bg-ink-4 opacity-50" />
+                        <span className="whitespace-nowrap tabular-nums text-ink-3">{new Date(d.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </span>
                     </div>
                   </div>
-                  <StatusBadge type="compliance" value={d.status} size="sm" />
+                  <div className="shrink-0 w-28 flex justify-end">
+                    <StatusBadge type="compliance" value={d.status} />
+                  </div>
                 </div>
                 );
               })
             )}
           </div>
-          <div
-            className="px-5 py-2.5 flex items-center"
-            style={{ borderTop: '1px solid rgba(210,218,204,0.6)', background: 'rgba(245,248,242,0.8)' }}
-          >
+          <div className="px-6 py-3.5 flex items-center border-t border-line-soft bg-surface">
             <button
               onClick={() => navigate('/performance')}
-              className="group flex items-center gap-1 text-[11px] font-semibold text-brand-600"
+              className="group flex items-center gap-1.5 text-[12px] font-bold text-primary hover:text-emerald-400 transition-colors"
             >
               View all commitments
-              <ChevronRight size={11} className="transition-transform group-hover:translate-x-0.5" />
+              <ChevronRight size={14} className="transition-transform group-hover:translate-x-1" />
             </button>
           </div>
         </Panel>
@@ -530,47 +550,45 @@ export function Dashboard() {
           <PanelHeader
             title="Recent Activity"
             subtitle="Latest system events"
-            actions={<Activity size={13} style={{ color: '#8FA88A' }} />}
+            actions={<Activity size={16} className="text-ink-4" />}
           />
-          <div className="divide-y" style={{ borderColor: 'rgba(210,218,204,0.5)' }}>
-            {activity.map((ev, i) => (
-              <div key={ev.id} className="px-5 py-3.5" style={{ animationDelay: `${i * 0.05}s` }}>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 mt-0.5">
+          <ol className="divide-y divide-line-soft flex-1">
+            {activity.map((ev, i) => {
+              const tint =
+                ev.type === 'alert'  ? { bg: 'rgba(239, 68, 68, 0.1)',  bd: 'rgba(239, 68, 68, 0.2)',  fg: '#EF4444' } :
+                ev.type === 'update' ? { bg: 'rgba(245, 158, 11, 0.1)', bd: 'rgba(245, 158, 11, 0.2)', fg: '#F59E0B' } :
+                                       { bg: 'rgba(16, 185, 129, 0.1)', bd: 'rgba(16, 185, 129, 0.2)', fg: '#10B981' };
+              return (
+                <li key={ev.id} className="px-6 py-4 fade-in-up hover:bg-foreground/[0.02] transition-colors" style={{ animationDelay: `${i * 0.05}s` }}>
+                  <div className="flex items-start gap-4">
                     <div
-                      className="w-7 h-7 rounded-xl flex items-center justify-center text-[12px]"
-                      style={{
-                        background:
-                          ev.type === 'alert'  ? 'rgba(220,38,38,0.09)'  :
-                          ev.type === 'update' ? 'rgba(217,119,6,0.09)'  :
-                                                 'rgba(1,105,64,0.09)',
-                        border:
-                          ev.type === 'alert'  ? '1px solid rgba(220,38,38,0.15)'  :
-                          ev.type === 'update' ? '1px solid rgba(217,119,6,0.15)'  :
-                                                 '1px solid rgba(1,105,64,0.15)',
-                      }}
+                      className="shrink-0 mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center shadow-sm"
+                      style={{ background: tint.bg, border: `1px solid ${tint.bd}`, color: tint.fg }}
+                      aria-hidden
                     >
-                      {ev.icon}
+                      <ev.Icon size={16} strokeWidth={2.5} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-medium leading-snug text-foreground">{ev.text}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.1em]"
+                          style={{ color: tint.fg }}
+                        >
+                          {ACTIVITY_TYPE_LABEL[ev.type]}
+                        </span>
+                        <span className="w-1 h-1 rounded-full bg-ink-4 opacity-50" aria-hidden />
+                        <Clock size={10} className="text-ink-4" aria-hidden />
+                        <time className="text-[11px] font-mono font-medium tabular-nums text-ink-4">{ev.time}</time>
+                      </div>
                     </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[12px] leading-snug" style={{ color: '#2D5240' }}>
-                      {ev.text}
-                    </div>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      <Clock size={9} style={{ color: '#B8C8BE' }} />
-                      <span className="text-[10px] font-mono" style={{ color: '#B8C8BE' }}>{ev.time}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div
-            className="px-5 py-2.5"
-            style={{ borderTop: '1px solid rgba(210,218,204,0.6)', background: 'rgba(245,248,242,0.8)' }}
-          >
-            <span className="text-[10px]" style={{ color: '#B8C8BE' }}>
+                </li>
+              );
+            })}
+          </ol>
+          <div className="px-6 py-3 border-t border-line-soft bg-surface">
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-4">
               Activity derived from live compliance data
             </span>
           </div>
@@ -588,27 +606,27 @@ function RiskFlagRow({ flag, index, onClick }: { flag: RiskFlag; index: number; 
     <button
       onClick={onClick}
       aria-label={`Investigate ${flag.severity} risk flag for ${operator?.name ?? 'operator'}: ${flag.category}`}
-      className="w-full text-left px-5 py-3.5 pl-5 hover:pl-[22px] bg-surface hover:bg-surface-2 transition-[padding,background-color] duration-150 group"
+      className="w-full text-left px-6 py-4 flex items-start gap-4 hover:bg-foreground/[0.02] transition-all duration-300 group"
       style={{ animationDelay: `${index * 0.04}s` }}
     >
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 mt-0.5">
-          <StatusBadge type="severity" value={flag.severity} size="sm" />
+      <div className="shrink-0 mt-1">
+        <StatusBadge type="severity" value={flag.severity} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-medium leading-relaxed line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+          {flag.description}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[12px] leading-snug line-clamp-2 text-ink">{flag.description}</div>
-          <div className="flex items-center gap-2 mt-1 text-[11px] text-ink-4">
-            <span>{operator?.name}</span>
-            <span aria-hidden>·</span>
-            <span>{agreement?.countryId}</span>
-            <span aria-hidden>·</span>
-            <span>{flag.category}</span>
-          </div>
+        <div className="flex items-center gap-2.5 mt-2 text-[11px] font-medium text-ink-4">
+          <span>{operator?.name}</span>
+          <span className="w-1 h-1 rounded-full bg-ink-4 opacity-50" aria-hidden />
+          <span>{agreement?.countryId}</span>
+          <span className="w-1 h-1 rounded-full bg-ink-4 opacity-50" aria-hidden />
+          <span>{flag.category}</span>
         </div>
-        <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-brand-600">
-          <span className="text-[10px] font-semibold">View</span>
-          <ArrowUpRight size={11} />
-        </div>
+      </div>
+      <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-1 text-primary">
+        <span className="text-[11px] font-bold">Investigate</span>
+        <ArrowUpRight size={13} strokeWidth={2.5} />
       </div>
     </button>
   );

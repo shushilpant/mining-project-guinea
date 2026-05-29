@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import { sanitizeRecords } from '@/lib/exportSafety';
 import {
   Activity, Download, Trash2, Search,
   Shield, Clock, Database, TrendingUp,
@@ -18,9 +19,9 @@ import { useRole } from '@/hooks/useRole';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const FOREST = '#011F14';
-const GOLD   = '#C8991E';
-const GREEN  = '#016940';
+const FOREST = '#062b1d'; // forest-900 — deep Sahel green
+const GOLD   = '#d68a18'; // gold-600   — Saharan saffron
+const GREEN  = '#006b3f'; // brand-600  — Ghana flag green
 
 // ─── Config maps ──────────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ function ComplianceProgress({
             <button
               onClick={onSignOff}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-white transition-all"
-              style={{ background: `linear-gradient(135deg, ${GREEN} 0%, #15803d 100%)`, boxShadow: '0 2px 8px rgba(1,105,64,0.35)' }}
+              style={{ background: `linear-gradient(135deg, ${GREEN} 0%, #0a8a52 100%)`, boxShadow: '0 2px 8px rgba(0,107,63,0.35)' }}
             >
               <Download size={12} />
               Export Signed-Off Report
@@ -289,7 +290,7 @@ function QueueRow({
     <div
       className="flex items-start gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all"
       style={{
-        background: isFocused ? `rgba(1,31,20,0.05)` : 'transparent',
+        background: isFocused ? `rgba(6,43,29,0.05)` : 'transparent',
         borderLeft: `2px solid ${rvwCfg.border}`,
       }}
       onClick={() => onSelect(entry.id)}
@@ -701,7 +702,7 @@ export function AuditMonitorPage() {
       'Anomaly Reason': e.anomalyReason ?? '',
     }));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Audit Log');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sanitizeRecords(data)), 'Audit Log');
     const suffix = signedOff ? '_signed_off' : '';
     XLSX.writeFile(wb, `peb0526_audit${suffix}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
@@ -727,7 +728,7 @@ export function AuditMonitorPage() {
           <div className="flex items-center gap-2.5">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: `linear-gradient(135deg, ${FOREST} 0%, ${GREEN} 100%)`, boxShadow: '0 3px 12px rgba(1,31,20,0.25)' }}
+              style={{ background: `linear-gradient(135deg, ${FOREST} 0%, ${GREEN} 100%)`, boxShadow: '0 3px 12px rgba(6,43,29,0.25)' }}
             >
               <Activity size={16} className="text-white" />
             </div>
@@ -741,7 +742,7 @@ export function AuditMonitorPage() {
             </div>
             <div
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ml-1"
-              style={{ background: 'rgba(1,105,64,0.08)', color: GREEN, border: `1px solid rgba(1,105,64,0.18)` }}
+              style={{ background: 'rgba(0,107,63,0.08)', color: GREEN, border: `1px solid rgba(0,107,63,0.18)` }}
             >
               <div className="w-1.5 h-1.5 rounded-full pulse-live" style={{ background: GREEN }} />
               Live
@@ -978,9 +979,9 @@ export function AuditMonitorPage() {
                           }
                           style={{
                             background: isNew
-                              ? `rgba(200,153,30,0.06)`
+                              ? `rgba(214,138,24,0.06)`
                               : isExpanded || isFocused
-                              ? `rgba(1,31,20,0.025)`
+                              ? `rgba(6,43,29,0.025)`
                               : undefined,
                           }}
                           onClick={() => {
@@ -1047,7 +1048,7 @@ export function AuditMonitorPage() {
                         {isExpanded && (
                           <tr
                             key={`${entry.id}-expanded`}
-                            style={{ background: `rgba(1,31,20,0.02)`, borderBottom: '1px solid #EEF2EA' }}
+                            style={{ background: `rgba(6,43,29,0.02)`, borderBottom: '1px solid #EEF2EA' }}
                           >
                             <td />
                             <td colSpan={7} className="px-6 py-3.5">

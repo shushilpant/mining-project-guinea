@@ -9,4 +9,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api/local-ai': {
+        target: 'http://127.0.0.1:1234',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/local-ai/, ''),
+      },
+    },
+  },
 })

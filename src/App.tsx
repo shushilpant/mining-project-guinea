@@ -14,9 +14,12 @@ const OperatorDetailPage  = lazy(() => import('@/pages/Performance').then(m => (
 const RiskPage            = lazy(() => import('@/pages/Risk').then(m => ({ default: m.RiskPage })));
 const RiskFlagDetailPage  = lazy(() => import('@/pages/Risk').then(m => ({ default: m.RiskFlagDetailPage })));
 const TransparencyPage    = lazy(() => import('@/pages/Transparency').then(m => ({ default: m.TransparencyPage })));
+const ScenariosPage       = lazy(() => import('@/pages/Scenarios').then(m => ({ default: m.ScenariosPage })));
 const NegotiationPage     = lazy(() => import('@/pages/Negotiation').then(m => ({ default: m.NegotiationPage })));
 const AdminPage           = lazy(() => import('@/pages/Admin').then(m => ({ default: m.AdminPage })));
 const AuditMonitorPage    = lazy(() => import('@/pages/AuditMonitor').then(m => ({ default: m.AuditMonitorPage })));
+const OwnershipPage       = lazy(() => import('@/pages/Ownership').then(m => ({ default: m.OwnershipPage })));
+const LocalContentPage    = lazy(() => import('@/pages/LocalContent').then(m => ({ default: m.LocalContentPage })));
 
 function RouteFallback() {
   return (
@@ -27,33 +30,53 @@ function RouteFallback() {
   );
 }
 
+import { useThemeStore } from '@/store/themeStore';
+import { useEffect } from 'react';
+
+function ThemeWrapper({ children }: { children: React.ReactNode }) {
+  const theme = useThemeStore((state) => state.theme);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+  }, [theme]);
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
-    <BrowserRouter>
-      <CountryProvider>
-        <Routes>
-          {/* Public Route */}
-          <Route path="/login" element={<Login />} />
+    <ThemeWrapper>
+      <BrowserRouter>
+        <CountryProvider>
+          <Routes>
+            {/* Public Route */}
+            <Route path="/login" element={<Login />} />
 
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Suspense fallback={<RouteFallback />}><Dashboard /></Suspense>} />
-              <Route path="agreements" element={<Suspense fallback={<RouteFallback />}><AgreementsPage /></Suspense>} />
-              <Route path="agreements/:id" element={<Suspense fallback={<RouteFallback />}><AgreementDetailPage /></Suspense>} />
-              <Route path="performance" element={<Suspense fallback={<RouteFallback />}><PerformancePage /></Suspense>} />
-              <Route path="performance/:operatorId" element={<Suspense fallback={<RouteFallback />}><OperatorDetailPage /></Suspense>} />
-              <Route path="risk" element={<Suspense fallback={<RouteFallback />}><RiskPage /></Suspense>} />
-              <Route path="risk/:flagId" element={<Suspense fallback={<RouteFallback />}><RiskFlagDetailPage /></Suspense>} />
-              <Route path="transparency" element={<Suspense fallback={<RouteFallback />}><TransparencyPage /></Suspense>} />
-              <Route path="negotiation" element={<Suspense fallback={<RouteFallback />}><NegotiationPage /></Suspense>} />
-              <Route path="admin" element={<Suspense fallback={<RouteFallback />}><AdminPage /></Suspense>} />
-              <Route path="audit" element={<Suspense fallback={<RouteFallback />}><AuditMonitorPage /></Suspense>} />
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Suspense fallback={<RouteFallback />}><Dashboard /></Suspense>} />
+                <Route path="agreements" element={<Suspense fallback={<RouteFallback />}><AgreementsPage /></Suspense>} />
+                <Route path="agreements/:id" element={<Suspense fallback={<RouteFallback />}><AgreementDetailPage /></Suspense>} />
+                <Route path="performance" element={<Suspense fallback={<RouteFallback />}><PerformancePage /></Suspense>} />
+                <Route path="performance/:operatorId" element={<Suspense fallback={<RouteFallback />}><OperatorDetailPage /></Suspense>} />
+                <Route path="risk" element={<Suspense fallback={<RouteFallback />}><RiskPage /></Suspense>} />
+                <Route path="risk/:flagId" element={<Suspense fallback={<RouteFallback />}><RiskFlagDetailPage /></Suspense>} />
+                <Route path="transparency" element={<Suspense fallback={<RouteFallback />}><TransparencyPage /></Suspense>} />
+                <Route path="scenarios" element={<Suspense fallback={<RouteFallback />}><ScenariosPage /></Suspense>} />
+                <Route path="negotiation" element={<Suspense fallback={<RouteFallback />}><NegotiationPage /></Suspense>} />
+                <Route path="ownership" element={<Suspense fallback={<RouteFallback />}><OwnershipPage /></Suspense>} />
+                <Route path="local-content" element={<Suspense fallback={<RouteFallback />}><LocalContentPage /></Suspense>} />
+                <Route path="admin" element={<Suspense fallback={<RouteFallback />}><AdminPage /></Suspense>} />
+                <Route path="audit" element={<Suspense fallback={<RouteFallback />}><AuditMonitorPage /></Suspense>} />
+              </Route>
             </Route>
-          </Route>
-        </Routes>
-      </CountryProvider>
-    </BrowserRouter>
+          </Routes>
+        </CountryProvider>
+      </BrowserRouter>
+    </ThemeWrapper>
   );
 }
 

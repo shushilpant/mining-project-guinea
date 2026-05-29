@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Lock, User, ShieldCheck, AlertCircle, ArrowRight, Check } from 'lucide-react';
 
+// Mirrors the five ACCI modules specified in markdown.md §6 so the
+// landing copy stays in lock-step with the manuscript's architecture.
 const FEATURES = [
-  'Contract & concession agreement registry',
-  'Real-time operator compliance tracking',
-  'Automated risk flag & breach detection',
-  'EITI-aligned transparency reporting',
-  'Cross-country negotiation intelligence',
+  'M1 · Contract & Agreement Intelligence — clause ontology over mineral conventions',
+  'M2 · Negotiation Intelligence — IGF / EITI / OECD-benchmarked scenario simulation',
+  'M3 · Performance & Compliance Monitoring — continuous, exception-based assurance',
+  'M4 · Breach & Risk Detection — probabilistic models with SHAP-style explainability',
+  'M5 · Transparency & Reporting — EITI 2023 + OCDS Resource Contracts disclosure',
 ];
 
 export function Login() {
@@ -53,7 +55,7 @@ export function Login() {
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              'radial-gradient(900px circle at 85% -10%, rgba(200,153,30,0.07), transparent 55%), radial-gradient(700px circle at 0% 110%, rgba(1,105,64,0.16), transparent 50%)',
+              'radial-gradient(900px circle at 85% -10%, rgba(245,166,35,0.08), transparent 55%), radial-gradient(700px circle at 0% 110%, rgba(0,107,63,0.18), transparent 50%)',
           }}
         />
         {/* Thin static gold rule */}
@@ -76,12 +78,14 @@ export function Login() {
           </div>
 
           <h1 className="text-[33px] font-bold leading-[1.15] mb-5 text-white tracking-snugger">
-            National Compliance<br />
-            <span className="text-gold-500">Intelligence Platform</span>
+            Adaptive Continuous<br />
+            <span className="text-gold-500">Compliance Intelligence</span>
           </h1>
           <p className="text-[14px] leading-relaxed max-w-sm text-white/55">
-            Centralised monitoring of mining agreements, operator performance, and
-            compliance obligations across the West African region.
+            A five-module Investor &amp; Compliance Intelligence System for
+            mining-sector oversight across Guinea, Ghana, and Côte d&apos;Ivoire —
+            compressing the information-asymmetry gap between extractive operators
+            and state principals through continuous, evidentially anchored assurance.
           </p>
         </div>
 
@@ -123,7 +127,7 @@ export function Login() {
             </span>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold tracking-[0.1em] bg-forest-900/[0.06] text-ink-3">
-            PEB-0526
+            PEB-0526-WA-MIN-05
           </span>
         </div>
 
@@ -247,7 +251,7 @@ export function Login() {
         {/* Footer */}
         <div className="px-8 py-3 flex items-center justify-between border-t border-line glass">
           <span className="text-[11px] text-ink-3">
-            National Compliance Intelligence Platform · West Africa
+            ACCI · Investor &amp; Compliance Intelligence System — West Africa
           </span>
           <span className="text-[11px] font-mono text-ink-4">
             RESTRICTED — Government Use Only

@@ -9,12 +9,12 @@ interface MetricCardProps {
   onClick?: () => void;
 }
 
-const ACCENT: Record<string, { bar: string; iconBg: string; iconColor: string; valueColor: string }> = {
-  default: { bar: '#C7D3BE', iconBg: '#F0F4EC', iconColor: '#5A7567', valueColor: '#072B1E' },
-  green:   { bar: '#047857', iconBg: '#E7F4EE', iconColor: '#047857', valueColor: '#065F46' },
-  amber:   { bar: '#B45309', iconBg: '#FBF1E3', iconColor: '#B45309', valueColor: '#92400E' },
-  red:     { bar: '#B91C1C', iconBg: '#FBEBEB', iconColor: '#B91C1C', valueColor: '#991B1B' },
-  blue:    { bar: '#1D6FB8', iconBg: '#E8F1F8', iconColor: '#1D6FB8', valueColor: '#015534' },
+const ACCENT: Record<string, { bar: string; iconBg: string; iconColor: string }> = {
+  default: { bar: 'var(--line-strong)', iconBg: 'var(--secondary)',            iconColor: 'var(--ink-3)' },
+  green:   { bar: 'var(--primary)',     iconBg: 'color-mix(in srgb, var(--primary) 10%, transparent)', iconColor: 'var(--primary)' },
+  amber:   { bar: '#D97706',           iconBg: 'rgba(217, 119, 6, 0.1)',       iconColor: '#D97706' },
+  red:     { bar: 'var(--destructive)', iconBg: 'color-mix(in srgb, var(--destructive) 10%, transparent)', iconColor: 'var(--destructive)' },
+  blue:    { bar: '#1D6FB8',           iconBg: 'rgba(29, 111, 184, 0.1)',      iconColor: '#1D6FB8' },
 };
 
 export function MetricCard({ label, value, sub, icon, accent = 'default', onClick }: MetricCardProps) {
@@ -28,21 +28,21 @@ export function MetricCard({ label, value, sub, icon, accent = 'default', onClic
       tabIndex={interactive ? 0 : undefined}
       onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick!(); } } : undefined}
       className={
-        'relative flex overflow-hidden rounded-xl bg-surface border border-line shadow-xs count-up ' +
-        (interactive ? 'card-hover cursor-pointer hover:shadow-md hover:border-line-strong' : '')
+        'relative rounded-2xl bg-card border border-line-soft shadow-card transition-all duration-300 ' +
+        (interactive ? 'card-hover cursor-pointer' : '')
       }
+      style={{ borderLeftWidth: 3, borderLeftColor: a.bar }}
     >
-      {/* Restrained left accent rule */}
-      <span className="w-[3px] shrink-0" style={{ background: a.bar }} aria-hidden />
-
-      <div className="flex-1 p-5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] mb-2 text-ink-4">{label}</p>
-            <p className="text-[26px] font-bold tabular-nums leading-none tracking-tightest" style={{ color: a.valueColor }}>
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] mb-2 truncate opacity-70" style={{ color: a.iconColor }}>{label}</p>
+            <p className="text-[26px] font-bold tabular-nums leading-none tracking-tight" style={{ color: a.iconColor }}>
               {value}
             </p>
-            {sub && <p className="text-[11px] mt-1.5 leading-tight text-ink-3">{sub}</p>}
+            <p className="text-[11px] mt-1.5 leading-none truncate opacity-70" style={{ color: a.iconColor }} aria-hidden={!sub}>
+              {sub ?? <span className="select-none">&nbsp;</span>}
+            </p>
           </div>
 
           {icon && (

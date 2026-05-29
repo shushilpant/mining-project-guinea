@@ -171,3 +171,87 @@ export const DEFAULT_THRESHOLDS: RiskThresholds = {
   agreementExpiryWarningDays: 90,
   performanceDropPercent: 25,
 };
+
+// ============================================================
+// New Feature Types
+// ============================================================
+
+export interface BeneficialOwnerNode {
+  id: string;
+  /** Operator this ownership node belongs to — scopes the tree per operator. */
+  operatorId: string;
+  name: string;
+  jurisdiction: string;
+  ownershipPercent: number;
+  isPEP: boolean;
+  pepDetails?: string;
+  isOpaque: boolean;
+  parentId?: string;
+  entityType: 'individual' | 'corporate' | 'government' | 'trust';
+}
+
+export interface ProtectedZone {
+  id: string;
+  name: string;
+  type: 'national_park' | 'artisanal_zone' | 'water_reserve' | 'forest_reserve' | 'wildlife_corridor';
+  countryId: string;
+  coordinates: [number, number];
+  radiusKm: number;
+  description: string;
+}
+
+export interface ConcessionConflict {
+  id: string;
+  agreementId: string;
+  zoneId: string;
+  overlapAreaKm2: number;
+  severity: 'critical' | 'high' | 'medium';
+  description: string;
+}
+
+export interface CommodityPrice {
+  date: string;
+  commodity: Commodity;
+  pricePerUnit: number;
+  unit: string;
+}
+
+export interface LocalContentRecord {
+  id: string;
+  agreementId: string;
+  operatorId: string;
+  category: 'employment' | 'procurement' | 'infrastructure' | 'training' | 'community_fund';
+  promised: number;
+  actual: number;
+  unit: string;
+  reportingPeriod: string;
+  verifiedBy?: string;
+  verifiedDate?: string;
+}
+
+export interface DocumentAccessLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  action: 'viewed' | 'downloaded' | 'modified' | 'uploaded' | 'deleted';
+  documentName: string;
+  documentVersion: string;
+  documentType: 'agreement' | 'negotiation_note' | 'audit_report' | 'eiti_report' | 'risk_assessment';
+  agreementId?: string;
+  ipAddress: string;
+  /** Content hash of the document version touched — anchors the immutable audit trail. */
+  hash: string;
+  details?: string;
+}
+
+export interface EITIReportSection {
+  countryId: string;
+  sectionNumber: string;
+  title: string;
+  status: 'complete' | 'partial' | 'missing';
+  dataSource: string;
+  lastUpdated: string;
+}
+

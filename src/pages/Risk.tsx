@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   getRiskFlags, getRiskFlagById, getOperatorById, getAgreementById, getCommitmentById,
+  getConcessionConflicts, getProtectedZones
 } from '@/services/dataService';
 import { useCountry } from '@/context/CountryContext';
 import { useDataStore } from '@/store/dataStore';
@@ -13,7 +14,8 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { StatusDropdown } from '@/components/shared/StatusDropdown';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { RulePill } from '@/components/shared/RulePill';
-import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
+import { AnomalyScanPanel } from '@/components/shared/AnomalyScanPanel';
+import { ArrowLeft, Search, SlidersHorizontal, Map, AlertOctagon } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { RiskSeverity, RiskFlagStatus } from '@/data/types';
 
@@ -64,12 +66,17 @@ export function RiskPage() {
   const critical = openFlags.filter(f => f.severity === 'critical').length;
   const high = openFlags.filter(f => f.severity === 'high').length;
   const medium = openFlags.filter(f => f.severity === 'medium').length;
+  
+  const concessionConflicts = useMemo(() => getConcessionConflicts(countryId), [countryId, dataVersion]);
+  const protectedZones = useMemo(() => getProtectedZones(countryId), [countryId, dataVersion]);
+
+  const [activeTab, setActiveTab] = useState<'flags' | 'conflicts'>('flags');
 
   return (
     <div>
       <PageHeader
-        title="Breach & Risk Detection"
-        subtitle="Rule-based early-warning system — every flag traces to a rule and evidence"
+        title="Module 4 — Breach & Risk Detection"
+        subtitle="Probabilistic identification of latent, emerging or systemic breach patterns — every flag traces to a rule, evidence, and an explainable attribution · ACCI §6.4"
         actions={
           <button
             onClick={() => setShowThresholds(v => !v)}
@@ -140,7 +147,7 @@ export function RiskPage() {
             {isAdmin && (
               <span
                 className="text-[11px] px-2.5 py-1 rounded border font-medium"
-                style={{ color: '#016940', background: '#F0F8F4', borderColor: '#B5E0D0' }}
+                style={{ color: '#006b3f', background: '#e8f5ee', borderColor: '#a4d4b6' }}
               >
                 Changes applied system-wide
               </span>
@@ -157,9 +164,106 @@ export function RiskPage() {
         <MetricCard label="Total Open" value={openFlags.length} accent="default" />
       </div>
 
+      {/* Semantic anomaly scan — surfaces patterns the rule engine doesn't catch */}
+      <div className="mb-5">
+        <AnomalyScanPanel countryId={selectedCountry} />
+      </div>
+      
+      {/* Tabs */}
+      <div className="flex border-b border-line mb-5">
+        <button
+          onClick={() => setActiveTab('flags')}
+          className={'px-5 py-3 text-[13px] font-bold uppercase tracking-widest border-b-2 transition-colors ' + (activeTab === 'flags' ? 'border-primary text-primary' : 'border-transparent text-ink-4 hover:text-ink-2')}
+        >
+          Risk Flags
+        </button>
+        <button
+          onClick={() => setActiveTab('conflicts')}
+          className={'px-5 py-3 text-[13px] font-bold uppercase tracking-widest border-b-2 transition-colors flex items-center gap-2 ' + (activeTab === 'conflicts' ? 'border-destructive text-destructive' : 'border-transparent text-ink-4 hover:text-ink-2')}
+        >
+          <Map size={14} />
+          Concession Conflicts
+          {concessionConflicts.length > 0 && (
+            <span className="bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-md text-[10px] ml-1">{concessionConflicts.length}</span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'conflicts' && (
+        <div className="space-y-4 fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <MetricCard label="Total Overlaps" value={concessionConflicts.length} icon={<Map size={16} />} accent={concessionConflicts.length > 0 ? "red" : "green"} />
+            <MetricCard label="Protected Zones" value={protectedZones.length} icon={<Map size={16} />} accent="default" />
+            <MetricCard label="Critical Severity" value={concessionConflicts.filter(c => c.severity === 'critical').length} icon={<AlertOctagon size={16} />} accent="red" />
+          </div>
+          
+          <div className="bg-surface rounded-xl border border-line shadow-card overflow-hidden">
+            <div className="px-5 py-3 border-b border-line-soft bg-surface-2">
+              <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">Geospatial Conflict Register</h2>
+              <p className="text-[11px] mt-0.5 text-ink-4">Detected overlaps between mining concessions and protected environmental/social zones</p>
+            </div>
+            
+            <div className="divide-y divide-line-soft">
+              {concessionConflicts.length === 0 ? (
+                <div className="p-8 text-center text-ink-4 text-[13px]">No concession conflicts detected in the selected region.</div>
+              ) : (
+                concessionConflicts.map(conflict => {
+                  const ag = getAgreementById(conflict.agreementId);
+                  const op = ag ? getOperatorById(ag.operatorId) : null;
+                  const zone = protectedZones.find(z => z.id === conflict.zoneId);
+                  
+                  return (
+                    <div key={conflict.id} className="p-4 bg-surface hover:bg-surface-2 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex gap-4">
+                          <div className="shrink-0 mt-1">
+                            <StatusBadge type="severity" value={conflict.severity} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-[13px] text-ink">{conflict.description}</span>
+                              <span className="text-[10px] font-mono bg-surface-2 px-2 py-0.5 rounded text-ink-3 border border-line-soft">
+                                {conflict.id}
+                              </span>
+                            </div>
+                            <div className="text-[12px] text-ink-4 mb-2 flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-ink-3">{ag?.id}</span>
+                              <span aria-hidden>·</span>
+                              <span>{ag?.concesssionArea}</span>
+                              <span aria-hidden>·</span>
+                              <span className="font-medium text-ink-3">{op?.name}</span>
+                            </div>
+                            
+                            {zone && (
+                              <div className="bg-destructive/5 border border-destructive/20 rounded-md p-3 max-w-2xl">
+                                <div className="text-[11px] font-bold text-destructive uppercase tracking-wide mb-1">
+                                  Protected Zone Overlay: {zone.name}
+                                </div>
+                                <div className="flex justify-between items-end">
+                                  <div className="text-[12px] text-ink-3">{zone.description}</div>
+                                  <div className="text-right ml-4 shrink-0">
+                                    <div className="text-[10px] uppercase tracking-widest text-ink-4">Overlap Area</div>
+                                    <div className="font-mono font-bold text-destructive">{conflict.overlapAreaKm2} km²</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Flag list */}
+      {activeTab === 'flags' && (
       <div
-        className="bg-white rounded"
+        className="bg-white rounded fade-in"
         style={{ border: '1px solid #D2DACC', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
       >
         {/* Filter bar */}
@@ -220,7 +324,13 @@ export function RiskPage() {
             const op = getOperatorById(flag.operatorId);
             const ag = getAgreementById(flag.agreementId);
             return (
-              <div key={flag.id} className="flex items-start gap-3 px-4 py-4 bg-surface hover:bg-surface-2 transition-colors">
+              <div
+                key={flag.id}
+                className="flex items-start gap-3 px-4 py-4 bg-surface hover:bg-surface-2 transition-colors"
+                data-ai-entity={`risk:${flag.id}`}
+                data-ai-label={`${flag.id} — ${flag.category}`}
+                data-ai-sub={`${flag.severity.toUpperCase()} · ${op?.name ?? flag.operatorId}`}
+              >
                 {/* Severity dot */}
                 <span
                   className="shrink-0 w-2 h-2 rounded-full mt-1.5"
@@ -263,6 +373,7 @@ export function RiskPage() {
           })}
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -275,6 +386,7 @@ export function RiskFlagDetailPage() {
   const dataVersion = useDataStore((state) => state.version);
 
   const flag = useMemo(() => (flagId ? getRiskFlagById(flagId) : undefined), [flagId, dataVersion]);
+
   if (!flag) {
     return (
       <div role="status" className="bg-surface rounded-xl border border-line shadow-card p-10 text-center">
@@ -307,6 +419,9 @@ export function RiskFlagDetailPage() {
       <div
         className="bg-white rounded p-5 mb-4"
         style={{ border: '1px solid #D2DACC', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+        data-ai-entity={`risk:${flag.id}`}
+        data-ai-label={`${flag.id} — ${flag.category}`}
+        data-ai-sub={`${flag.severity.toUpperCase()} · ${operator?.name ?? flag.operatorId}`}
       >
         <div className="flex items-start gap-3 mb-4">
           <div className="shrink-0">
@@ -366,7 +481,7 @@ export function RiskFlagDetailPage() {
             <button
               onClick={() => navigate(`/performance/${operator.id}`)}
               className="text-[12px] font-semibold hover:underline"
-              style={{ color: '#016940' }}
+              style={{ color: '#006b3f' }}
             >
               View operator scorecard →
             </button>
@@ -396,7 +511,7 @@ export function RiskFlagDetailPage() {
             <button
               onClick={() => navigate(`/agreements/${agreement.id}`)}
               className="text-[12px] font-semibold hover:underline"
-              style={{ color: '#016940' }}
+              style={{ color: '#006b3f' }}
             >
               View agreement detail →
             </button>
@@ -469,7 +584,7 @@ function ThresholdSlider({
         value={value}
         onChange={e => onChange(Number(e.target.value))}
         className="w-full"
-        style={{ accentColor: '#016940' }}
+        style={{ accentColor: '#006b3f' }}
       />
       <div className="text-[11px] mt-0.5 leading-tight" style={{ color: '#8FA88A' }}>
         {description}

@@ -17,6 +17,14 @@ import type {
   CountrySummary,
   RiskThresholds,
   ComplianceStatus,
+  BeneficialOwnerNode,
+  ProtectedZone,
+  ConcessionConflict,
+  CommodityPrice,
+  LocalContentRecord,
+  DocumentAccessLog,
+  EITIReportSection,
+  Commodity,
 } from '@/data/types';
 import { DEFAULT_THRESHOLDS } from '@/data/types';
 
@@ -402,6 +410,87 @@ export function getLastRefreshed(countryId?: string): string {
     return '24 May 2024 — 08:15 GMT / 02:15 CST (simulated)';
   }
   return '24 May 2024 — 09:15 WAT / 02:15 CST (simulated)';
+}
+
+// ─── New Feature Accessors ───────────────────────────────────
+
+export function getBeneficialOwnerTree(operatorId: string): BeneficialOwnerNode[] {
+  return DB.beneficialOwnerTrees.filter(n => n.operatorId === operatorId);
+}
+
+export function getPEPExposure(countryId?: string) {
+  const operators = getOperators(countryId);
+  return operators.map(op => {
+    const tree = DB.beneficialOwnerTrees.filter(n => n.operatorId === op.id);
+    const pepCount = tree.filter(n => n.isPEP).length;
+    const opaqueEntities = tree.filter(n => n.isOpaque).length;
+    return { operatorId: op.id, pepCount, opaqueEntities };
+  });
+}
+
+export function getProtectedZones(countryId?: string): ProtectedZone[] {
+  if (!countryId || countryId === 'ALL') return DB.protectedZones;
+  return DB.protectedZones.filter(z => z.countryId === countryId);
+}
+
+export function getConcessionConflicts(countryId?: string): ConcessionConflict[] {
+  const agreements = getAgreements(countryId);
+  const ids = new Set(agreements.map(a => a.id));
+  return DB.concessionConflicts.filter(c => ids.has(c.agreementId));
+}
+
+export function getCommodityPrices(commodity: Commodity): CommodityPrice[] {
+  return DB.commodityPrices.filter(p => p.commodity === commodity);
+}
+
+export function getLocalContentRecords(operatorId?: string, countryId?: string): LocalContentRecord[] {
+  let records = DB.localContentRecords;
+  if (operatorId) {
+    records = records.filter(r => r.operatorId === operatorId);
+  }
+  if (countryId && countryId !== 'ALL') {
+    const operators = new Set(getOperators(countryId).map(o => o.id));
+    records = records.filter(r => operators.has(r.operatorId));
+  }
+  return records;
+}
+
+export function getLocalContentSummary(operatorId: string) {
+  const records = getLocalContentRecords(operatorId);
+  const categories = ['employment', 'procurement', 'infrastructure', 'training', 'community_fund'];
+  
+  return categories.map(cat => {
+    const catRecords = records.filter(r => r.category === cat);
+    const promisedTotal = catRecords.reduce((sum, r) => sum + r.promised, 0);
+    const actualTotal = catRecords.reduce((sum, r) => sum + r.actual, 0);
+    const compliancePercent = promisedTotal > 0 ? Math.round((actualTotal / promisedTotal) * 100) : 100;
+    
+    return { category: cat, promisedTotal, actualTotal, compliancePercent };
+  });
+}
+
+export function getDocumentAccessLogs(filters?: { agreementId?: string; userId?: string; action?: string }): DocumentAccessLog[] {
+  let logs = DB.documentAccessLogs;
+  if (filters?.agreementId) logs = logs.filter(l => l.agreementId === filters.agreementId);
+  if (filters?.userId) logs = logs.filter(l => l.userId === filters.userId);
+  if (filters?.action) logs = logs.filter(l => l.action === filters.action);
+  return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+export function getEITIReportSections(countryId: string): EITIReportSection[] {
+  if (!countryId || countryId === 'ALL') return DB.eitiReportSections;
+  return DB.eitiReportSections.filter(s => s.countryId === countryId);
+}
+
+export function getEITIReportReadiness(countryId: string) {
+  const sections = getEITIReportSections(countryId);
+  const totalSections = sections.length;
+  const complete = sections.filter(s => s.status === 'complete').length;
+  const partial = sections.filter(s => s.status === 'partial').length;
+  const missing = sections.filter(s => s.status === 'missing').length;
+  const readinessPercent = totalSections > 0 ? Math.round(((complete + (partial * 0.5)) / totalSections) * 100) : 0;
+  
+  return { totalSections, complete, partial, missing, readinessPercent };
 }
 
 export { DEFAULT_THRESHOLDS };

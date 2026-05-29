@@ -79,9 +79,9 @@ const TYPE_ICON = {
 };
 
 const TYPE_COLOR: Record<ResultType, string> = {
-  agreement: '#016940',
+  agreement: '#006b3f', // brand-600 — Ghana flag green
   operator: '#4A6B58',
-  risk: '#DC2626',
+  risk: '#ce1126',      // Pan-African red
 };
 
 const TYPE_BG: Record<ResultType, string> = {
@@ -135,24 +135,24 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative shrink-0 header-search" ref={containerRef}>
       <button
         onClick={() => setOpen(true)}
         aria-label="Search records (Command or Control K)"
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] bg-surface-2 border border-line text-ink-3 transition-colors hover:border-line-strong hover:text-ink-2"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] whitespace-nowrap bg-surface-2 border border-line text-ink-3 transition-colors hover:border-line-strong hover:text-ink-2"
       >
-        <Search size={12} aria-hidden />
-        <span>Search records…</span>
-        <span className="ml-1 text-[10px] font-mono px-1 py-0.5 rounded bg-line text-ink-4" aria-hidden>⌘K</span>
+        <Search size={12} className="shrink-0" aria-hidden />
+        <span className="header-ctrl-label">Search records…</span>
+        <span className="header-ctrl-label shrink-0 ml-1 text-[10px] font-mono px-1 py-0.5 rounded bg-line text-ink-4" aria-hidden>⌘K</span>
       </button>
 
       {open && (
         <div
           role="dialog"
           aria-label="Global record search"
-          className="absolute right-0 top-full mt-2 w-[420px] bg-surface rounded-xl shadow-pop z-50 overflow-hidden border border-line"
+          className="absolute left-0 top-full mt-2 w-[420px] bg-surface rounded-xl shadow-pop z-50 overflow-hidden border border-line"
         >
           <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-line-soft">
             <Search size={14} className="text-ink-4 shrink-0" aria-hidden />

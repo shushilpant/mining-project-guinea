@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   getAgreements, getAgreementById, getOperatorById, getCommitments,
   getInfrastructureObligationsByAgreement, getRiskFlagsByOperator,
-  daysUntilExpiry,
+  daysUntilExpiry, getDocumentAccessLogs
 } from '@/services/dataService';
 import { mutationService } from '@/services/mutationService';
 import { useCountry } from '@/context/CountryContext';
@@ -15,7 +15,7 @@ import { StatusDropdown } from '@/components/shared/StatusDropdown';
 import { EditModal } from '@/components/shared/EditModal';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { formatDate, formatMillions, cn } from '@/lib/utils';
-import { ArrowLeft, Search, AlertCircle, Pencil } from 'lucide-react';
+import { ArrowLeft, Search, AlertCircle, Pencil, Eye, Download, FileText, Share, FileBadge } from 'lucide-react';
 import type { Agreement, AgreementStatus, ComplianceStatus, Commodity } from '@/data/types';
 
 const COUNTRY_NAMES: Record<string, string> = { GIN: 'Guinea', GHA: 'Ghana', CIV: "Côte d'Ivoire" };
@@ -165,8 +165,8 @@ export function AgreementsPage() {
   return (
     <div>
       <PageHeader
-        title="Contract & Agreement Intelligence"
-        subtitle="Centralised registry of all concession and licensing agreements"
+        title="Module 1 — Contract & Agreement Intelligence"
+        subtitle="Machine-readable contractual ontologies over mineral conventions, mining leases and royalty agreements — clause-tagged, jurisdictionally cross-referenced, and scored for Contract Integrity · ACCI §6.1"
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -255,6 +255,9 @@ export function AgreementsPage() {
                     key={a.id}
                     onClick={() => navigate(`/agreements/${a.id}`)}
                     className="cursor-pointer border-b border-line-soft transition-colors [&:nth-child(even)]:bg-surface-2 hover:bg-brand-600/[0.06]"
+                    data-ai-entity={`agreement:${a.id}`}
+                    data-ai-label={a.id}
+                    data-ai-sub={`${op.name} · ${a.commodity} · ${a.royaltyRate}%`}
                   >
                     <td className="px-4 py-3 font-mono text-[11px] text-ink-4">{a.id}</td>
                     <td className="px-4 py-3 font-semibold text-[13px] whitespace-nowrap text-ink">{op.name}</td>
@@ -348,6 +351,8 @@ export function AgreementDetailPage() {
   const infraObligations = getInfrastructureObligationsByAgreement(agreement.id);
   const operatorFlags = getRiskFlagsByOperator(agreement.operatorId)
     .filter(f => f.agreementId === agreement.id && f.status !== 'resolved');
+    
+  const accessLogs = getDocumentAccessLogs({ agreementId: agreement.id });
 
   const days = daysUntilExpiry(agreement.expiryDate);
   const isExpiringSoon = agreement.status === 'active' && days < 90 && days > 0;
@@ -545,6 +550,57 @@ export function AgreementDetailPage() {
         </div>
       )}
 
+      {/* Virtual Data Room Audit Trail */}
+      <div className="bg-surface rounded-xl border border-line shadow-card overflow-hidden mt-4">
+        <div className="px-5 py-3 border-b border-line-soft bg-surface-2 flex items-center justify-between">
+          <div>
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">Immutable Document Audit Trail (VDR)</h2>
+            <p className="text-[11px] mt-0.5 text-ink-4">Track internal and external data room access to contract documents.</p>
+          </div>
+          <FileBadge size={16} className="text-brand-600" />
+        </div>
+        
+        <div className="divide-y divide-line-soft">
+          {accessLogs.length === 0 ? (
+            <div className="p-8 text-center text-ink-4 text-[13px]">No access logs found for this agreement.</div>
+          ) : (
+            accessLogs.map(log => (
+              <div key={log.id} className="p-4 hover:bg-surface-2 transition-colors flex items-center gap-4">
+                <div className="shrink-0 p-2 rounded-lg bg-surface-2 border border-line">
+                  {log.action === 'viewed' && <Eye size={14} className="text-brand-600" />}
+                  {log.action === 'downloaded' && <Download size={14} className="text-status-warning" />}
+                  {log.action === 'modified' && <Pencil size={14} className="text-primary" />}
+                  {log.action === 'uploaded' && <Share size={14} className="text-ink-4" />}
+                  {log.action === 'deleted' && <AlertCircle size={14} className="text-status-danger" />}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-semibold text-ink flex items-center gap-2">
+                    {log.documentName}
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-line-soft text-ink-3">
+                      {log.documentVersion}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-ink-4 mt-0.5 flex gap-2">
+                    <span>{log.userId}</span>
+                    <span aria-hidden>·</span>
+                    <span>{formatDate(log.timestamp)}</span>
+                    <span aria-hidden>·</span>
+                    <span className="font-mono text-[9px]">{log.ipAddress}</span>
+                  </div>
+                </div>
+                
+                <div className="shrink-0">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-ink-4 mb-0.5 text-right">Verification Hash</div>
+                  <div className="text-[11px] font-mono text-ink-2 bg-surface-2 px-2 py-0.5 rounded border border-line-soft">
+                    {log.hash}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
       {/* Edit modal */}
       <EditModal
         isOpen={editOpen}

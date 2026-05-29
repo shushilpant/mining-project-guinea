@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, AlertTriangle, Clock, FileText } from 'lucide-react';
 import { getRiskFlags, getAgreements, daysUntilExpiry } from '@/services/dataService';
 
-const GOLD = '#C8991E';
-const SIDEBAR_BG = '#011F14';
+const GOLD = '#d68a18';        // gold-600 — Saharan saffron
+const SIDEBAR_BG = '#062b1d';  // forest-900 — deep Sahel green
 
 type AlertType = 'critical' | 'warning' | 'info';
 
@@ -84,7 +84,7 @@ export function NotificationPanel() {
   }, []);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative shrink-0" ref={ref}>
       <button
         onClick={() => setOpen(v => !v)}
         aria-label={`System alerts, ${alerts.length} active`}
