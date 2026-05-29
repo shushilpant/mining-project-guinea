@@ -14,6 +14,8 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { Printer, FileDown, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import * as XLSX from 'xlsx';
+import { sanitizeRecords } from '@/lib/exportSafety';
 
 // Per-country chart palette — pulled from each nation's flag so charts are
 // instantly recognisable: Guinea green, Ghana saffron, Côte d'Ivoire orange.
@@ -143,8 +145,36 @@ export function TransparencyPage() {
   const handlePrint = () => window.print();
   
   const handleExportEITI = () => {
-    // In a real app, this would use xlsx to compile the data
-    alert('Generating EITI Report export...');
+    const scope = countryId ?? 'GIN';
+    const countryName = COUNTRY_NAMES[scope] ?? scope;
+    const stamp = new Date().toISOString().slice(0, 10);
+
+    // Sheet 1 — readiness summary (derived from getEITIReportReadiness).
+    const summary = [
+      { Field: 'EITI Report — Scope', Value: countryName },
+      { Field: 'Generated', Value: stamp },
+      { Field: 'Standard', Value: 'EITI 2023 + OCDS Resource Contracts' },
+      { Field: 'Readiness (%)', Value: reportReadiness.readinessPercent },
+      { Field: 'Sections — Total', Value: reportReadiness.totalSections },
+      { Field: 'Sections — Complete', Value: reportReadiness.complete },
+      { Field: 'Sections — Partial', Value: reportReadiness.partial },
+      { Field: 'Sections — Missing', Value: reportReadiness.missing },
+    ];
+
+    // Sheet 2 — section-by-section disclosure status.
+    const sections = reportSections.map(s => ({
+      Section: s.sectionNumber,
+      Title: s.title,
+      Status: s.status,
+      'Data Source': s.dataSource,
+      'Last Updated': s.lastUpdated,
+    }));
+
+    // sanitizeRecords neutralises spreadsheet formula-injection in any text cell.
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sanitizeRecords(summary)), 'Readiness');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sanitizeRecords(sections)), 'Sections');
+    XLSX.writeFile(wb, `eiti_report_${scope.toLowerCase()}_${stamp}.xlsx`);
   };
 
   return (

@@ -41,8 +41,8 @@ interface Props {
 }
 
 export function StatusBadge({ type, value, size = 'md' }: Props) {
-  let style = { cls: '', dot: '' };
-  let label: string = value;
+  let style: { cls: string; dot: string };
+  let label: string;
 
   if (type === 'compliance') {
     style = COMPLIANCE_STYLES[value as ComplianceStatus];

@@ -55,9 +55,6 @@ import type {
 const COMMODITIES: Commodity[] = [
   'bauxite', 'gold', 'iron ore', 'manganese', 'nickel', 'diamonds', 'chromite',
 ];
-const COMMITMENT_TYPES: CommitmentType[] = [
-  'production', 'infrastructure', 'local-employment', 'environmental', 'community-development', 'financial',
-];
 const COMPLIANCE_STATUSES: ComplianceStatus[] = ['on-track', 'at-risk', 'breached', 'met'];
 const AGREEMENT_STATUSES: AgreementStatus[] = ['active', 'lapsed', 'under-review'];
 
@@ -532,7 +529,7 @@ function ExportTab() {
   const toggle = (key: string) =>
     setSelected(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
 
@@ -984,7 +981,7 @@ function NewOperatorForm() {
 // ─── Bulk Actions Tab ─────────────────────────────────────────────────────────
 
 function BulkActionsTab() {
-  const _v = useDataStore(s => s.version); // subscribe to data changes
+  useDataStore(s => s.version); // subscribe to data changes — re-render on mutation
   const allFlags = getRiskFlags();
   const allAgreements = DB.agreements;
 
@@ -1160,7 +1157,7 @@ function BulkActionsTab() {
                           onChange={() =>
                             setSelectedFlags(prev => {
                               const next = new Set(prev);
-                              next.has(flag.id) ? next.delete(flag.id) : next.add(flag.id);
+                              if (next.has(flag.id)) next.delete(flag.id); else next.add(flag.id);
                               return next;
                             })
                           }
@@ -1295,7 +1292,7 @@ function BulkActionsTab() {
                           onChange={() =>
                             setSelectedAgrs(prev => {
                               const next = new Set(prev);
-                              next.has(agr.id) ? next.delete(agr.id) : next.add(agr.id);
+                              if (next.has(agr.id)) next.delete(agr.id); else next.add(agr.id);
                               return next;
                             })
                           }

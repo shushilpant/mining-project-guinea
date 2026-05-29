@@ -104,7 +104,7 @@ export function getLatestPerformanceRecord(commitmentId: string): PerformanceRec
 // ─── Risk Flags ──────────────────────────────────────────────
 
 export function getRiskFlags(countryId?: string, thresholds: RiskThresholds = DEFAULT_THRESHOLDS): RiskFlag[] {
-  let flags = [...DB.riskFlags];
+  const flags = [...DB.riskFlags];
 
   // Compute dynamic flags from current data
   const dynamicFlags = computeDynamicFlags(thresholds);
@@ -453,20 +453,6 @@ export function getLocalContentRecords(operatorId?: string, countryId?: string):
     records = records.filter(r => operators.has(r.operatorId));
   }
   return records;
-}
-
-export function getLocalContentSummary(operatorId: string) {
-  const records = getLocalContentRecords(operatorId);
-  const categories = ['employment', 'procurement', 'infrastructure', 'training', 'community_fund'];
-  
-  return categories.map(cat => {
-    const catRecords = records.filter(r => r.category === cat);
-    const promisedTotal = catRecords.reduce((sum, r) => sum + r.promised, 0);
-    const actualTotal = catRecords.reduce((sum, r) => sum + r.actual, 0);
-    const compliancePercent = promisedTotal > 0 ? Math.round((actualTotal / promisedTotal) * 100) : 100;
-    
-    return { category: cat, promisedTotal, actualTotal, compliancePercent };
-  });
 }
 
 export function getDocumentAccessLogs(filters?: { agreementId?: string; userId?: string; action?: string }): DocumentAccessLog[] {

@@ -26,6 +26,10 @@ export function OwnershipPage() {
   const totalPEPs = pepExposure.reduce((sum, exp) => sum + exp.pepCount, 0);
 
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>(operators[0]?.id || '');
+  const [query, setQuery] = useState('');
+  const filteredOperators = operators.filter(op =>
+    op.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
 
   const selectedTree = ownerTrees[selectedOperatorId] || [];
   
@@ -107,14 +111,19 @@ export function OwnershipPage() {
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2 mb-4">Operator Selection</h2>
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4" size={14} />
-              <input 
-                type="text" 
-                placeholder="Search operators..." 
+              <input
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                aria-label="Search operators"
+                placeholder="Search operators..."
                 className="w-full bg-surface-2 border border-line rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
             <div className="space-y-1 max-h-[500px] overflow-y-auto pr-1">
-              {operators.map(op => {
+              {filteredOperators.length === 0 ? (
+                <div className="text-[12px] text-ink-4 py-6 text-center">No operators match “{query}”.</div>
+              ) : filteredOperators.map(op => {
                 const exposure = pepExposure.find(e => e.operatorId === op.id);
                 return (
                   <button

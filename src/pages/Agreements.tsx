@@ -15,7 +15,7 @@ import { StatusDropdown } from '@/components/shared/StatusDropdown';
 import { EditModal } from '@/components/shared/EditModal';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { formatDate, formatMillions, cn } from '@/lib/utils';
-import { ArrowLeft, Search, AlertCircle, Pencil, Eye, Download, FileText, Share, FileBadge } from 'lucide-react';
+import { ArrowLeft, Search, AlertCircle, Pencil, Eye, Download, Share, FileBadge } from 'lucide-react';
 import type { Agreement, AgreementStatus, ComplianceStatus, Commodity } from '@/data/types';
 
 const COUNTRY_NAMES: Record<string, string> = { GIN: 'Guinea', GHA: 'Ghana', CIV: "Côte d'Ivoire" };
@@ -582,7 +582,7 @@ export function AgreementDetailPage() {
                     </span>
                   </div>
                   <div className="text-[11px] text-ink-4 mt-0.5 flex gap-2">
-                    <span>{log.userId}</span>
+                    <span>{log.userName} · {log.userRole}</span>
                     <span aria-hidden>·</span>
                     <span>{formatDate(log.timestamp)}</span>
                     <span aria-hidden>·</span>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, Fragment } from 'react';
 import * as XLSX from 'xlsx';
 import { sanitizeRecords } from '@/lib/exportSafety';
 import {
@@ -352,8 +352,14 @@ function ReviewControls({ entry }: { entry: AuditEntry }) {
   const [note, setNote]   = useState(entry.reviewNote ?? '');
   const [mode, setMode]   = useState<'view' | 'flag' | 'escalate'>('view');
 
-  // Reset note if entry changes externally
-  useEffect(() => { setNote(entry.reviewNote ?? ''); }, [entry.id, entry.reviewNote]);
+  // Reset the draft note when a different entry is shown. Adjusting state during
+  // render (tracking the previous id) is React's recommended alternative to a
+  // setState-in-effect.
+  const [trackedId, setTrackedId] = useState(entry.id);
+  if (trackedId !== entry.id) {
+    setTrackedId(entry.id);
+    setNote(entry.reviewNote ?? '');
+  }
 
   const rvwCfg = REVIEW_CFG[entry.reviewStatus];
 
@@ -494,16 +500,15 @@ function ReviewControls({ entry }: { entry: AuditEntry }) {
 
 // ─── Hourly sparkline ─────────────────────────────────────────────────────────
 
-function HourlyChart({ entries }: { entries: AuditEntry[] }) {
+function HourlyChart({ entries, now }: { entries: AuditEntry[]; now: number }) {
   const buckets = useMemo(() => {
-    const now = Date.now();
     const arr = new Array(24).fill(0);
     entries.forEach(e => {
       const hoursAgo = Math.floor((now - new Date(e.timestamp).getTime()) / 3_600_000);
       if (hoursAgo < 24) arr[23 - hoursAgo]++;
     });
     return arr;
-  }, [entries]);
+  }, [entries, now]);
 
   const peak = Math.max(...buckets, 1);
 
@@ -594,7 +599,7 @@ export function AuditMonitorPage() {
   const [expandedId, setExpandedId]         = useState<string | null>(null);
   const [focusedId, setFocusedId]           = useState<string | null>(null);
   const [newIds, setNewIds]                 = useState<Set<string>>(new Set());
-  const [now, setNow]                       = useState(Date.now());
+  const [now, setNow]                       = useState(() => Date.now());
   const rowRefs                             = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   const prevLen = useRef(entries.length);
@@ -839,7 +844,7 @@ export function AuditMonitorPage() {
               </div>
             )}
           </div>
-          <HourlyChart entries={entries} />
+          <HourlyChart entries={entries} now={now} />
         </div>
 
         <div
@@ -969,9 +974,8 @@ export function AuditMonitorPage() {
                     const rvwCfg     = REVIEW_CFG[entry.reviewStatus];
 
                     return (
-                      <>
+                      <Fragment key={entry.id}>
                         <tr
-                          key={entry.id}
                           ref={el => { rowRefs.current[entry.id] = el; }}
                           className={
                             'border-b border-line-soft cursor-pointer transition-colors ' +
@@ -1107,7 +1111,7 @@ export function AuditMonitorPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>

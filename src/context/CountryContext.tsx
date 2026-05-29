@@ -21,6 +21,7 @@ export function CountryProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook co-located with its provider by design
 export function useCountry() {
   return useContext(CountryContext);
 }

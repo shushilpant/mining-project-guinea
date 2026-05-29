@@ -144,11 +144,6 @@ export function Layout() {
     setMaxWidth(measured);
   }, [isAdmin]);
 
-  // Never leave the sidebar wider than the measured content cap.
-  useEffect(() => {
-    setSidebarWidth((w) => Math.min(w, maxWidth));
-  }, [maxWidth]);
-
   useEffect(() => {
     let raf = 0;
     let lastX = 0;
@@ -221,7 +216,7 @@ export function Layout() {
             'h-full flex flex-col rounded-3xl overflow-hidden shadow-lg relative ' +
             (isResizing ? '' : 'transition-[width] duration-300 ease-out')
           }
-          style={{ width: sidebarWidth, background: '#011F14' }}
+          style={{ width: Math.min(sidebarWidth, maxWidth), background: '#011F14' }}
         >
           {/* Subtle radial glow */}
           <div

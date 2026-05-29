@@ -47,6 +47,7 @@ import {
   type ScenarioInput,
   type Commodity,
 } from '@/lib/revenueModel';
+import type { Agreement } from '@/data/types';
 
 const COUNTRY_SHORT: Record<string, string> = {
   GIN: 'Guinea', GHA: 'Ghana', CIV: "Côte d'Ivoire",
@@ -372,7 +373,7 @@ export function ScenariosPage() {
       {/* ── Commodity Stress Testing ────────────────────────── */}
       {activeTab === 'stress' && (
       <div className="space-y-5 fade-in">
-        <StressTestPanel countryId={selectedCountry} scopeAgreements={scopeAgreements} />
+        <StressTestPanel scopeAgreements={scopeAgreements} />
       </div>
       )}
     </div>
@@ -703,7 +704,7 @@ function ScenarioActionStrip({ actions, navigate }: { actions: AIAction[]; navig
 
 import { AreaChart, Area } from 'recharts';
 
-function StressTestPanel({ countryId, scopeAgreements }: { countryId: string; scopeAgreements: any[] }) {
+function StressTestPanel({ scopeAgreements }: { scopeAgreements: Agreement[] }) {
   const [selectedCommodity, setSelectedCommodity] = useState<Commodity>('gold');
   const [priceMultiplier, setPriceMultiplier] = useState<number>(1);
   const [selectedAgreementIds, setSelectedAgreementIds] = useState<string[]>([]);
@@ -714,11 +715,15 @@ function StressTestPanel({ countryId, scopeAgreements }: { countryId: string; sc
   const stressedPrice = currentPrice * priceMultiplier;
   
   const relevantAgreements = useMemo(() => scopeAgreements.filter(a => a.commodity === selectedCommodity), [scopeAgreements, selectedCommodity]);
-  
-  // Auto-select all if empty
-  useEffect(() => {
+
+  // Reset the selection to "all" whenever the relevant set changes (commodity or
+  // country switch). Adjusting state during render avoids a setState-in-effect.
+  const relevantKey = relevantAgreements.map(a => a.id).join(',');
+  const [trackedKey, setTrackedKey] = useState<string | null>(null);
+  if (trackedKey !== relevantKey) {
+    setTrackedKey(relevantKey);
     setSelectedAgreementIds(relevantAgreements.map(a => a.id));
-  }, [relevantAgreements]);
+  }
 
   const toggleAgreement = (id: string) => {
     setSelectedAgreementIds(prev => 
