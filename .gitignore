@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Personal / non-project documents (not part of the app)
+*.pdf
+resume.md
+resume.txt
