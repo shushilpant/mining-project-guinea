@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { getLocalContentRecords, getOperatorById } from '@/services/dataService';
 import { useCountry } from '@/context/CountryContext';
-import { useDataStore } from '@/store/dataStore';
+import { useStoreData } from '@/store/dataStore';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { MetricCard } from '@/components/shared/MetricCard';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
+import { ChartPanel } from '@/components/shared/ChartPanel';
 import { Users, Building2, CheckCircle2, AlertCircle } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -35,13 +37,12 @@ function complianceColor(pct: number): string {
 
 export function LocalContentPage() {
   const { selectedCountry } = useCountry();
-  const dataVersion = useDataStore((state) => state.version);
   const countryId = selectedCountry === 'ALL' ? undefined : selectedCountry;
 
   // Filter by COUNTRY (second arg). The first arg is operatorId — leave undefined.
-  const records = useMemo(
+  const records = useStoreData(
     () => getLocalContentRecords(undefined, countryId),
-    [countryId, dataVersion],
+    [countryId],
   );
 
   // Per-category aggregation: promised vs actual and a compliance ratio.
@@ -78,9 +79,12 @@ export function LocalContentPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Module 8 — Local Content & Community Auditing"
-        subtitle="Contractual commitments vs. verified delivery — employment, procurement, infrastructure, training and community-fund obligations."
+        title="Local Benefits Tracker"
+        subtitle="Are companies hiring locally and investing as they promised?"
+        badge="M8 · Local Content Auditing"
       />
+
+      <ModuleIntro />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
@@ -89,6 +93,7 @@ export function LocalContentPage() {
           sub="Mean of per-commitment delivery ratios"
           icon={<CheckCircle2 size={16} />}
           accent={overallCompliance >= 100 ? 'green' : overallCompliance >= 80 ? 'amber' : 'red'}
+          hint="On average, how much of each local-benefit promise (jobs, spending, training) has actually been delivered. 100% means promises are being fully met."
         />
         <MetricCard
           label="Operators Reporting"
@@ -96,6 +101,7 @@ export function LocalContentPage() {
           sub={`${records.length} tracked commitments`}
           icon={<Building2 size={16} />}
           accent="blue"
+          hint="How many companies have local-content data being tracked in this scope."
         />
         <MetricCard
           label="Commitments in Shortfall"
@@ -103,14 +109,19 @@ export function LocalContentPage() {
           sub="Delivery below contractual promise"
           icon={<AlertCircle size={16} />}
           accent={shortfalls > 0 ? 'red' : 'green'}
+          hint="The number of local-benefit promises where actual delivery is below what was contractually promised."
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-surface rounded-xl border border-line shadow-card p-5">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2 mb-1">Delivery by Commitment Category</h2>
-          <p className="text-[11px] text-ink-4 mb-4">Aggregate actual as a percentage of promised, per category.</p>
-          <div className="h-64">
+        <ChartPanel
+          title="Delivery by Commitment Category"
+          caption="Actual delivery as a percentage of what was promised, per category."
+          howToRead="Each bar is a category of local benefit. A bar reaching 100% means the promise was fully delivered; shorter bars (amber/red) show a shortfall in that area."
+          aiRegion="Delivery by Commitment Category"
+          ariaLabel="Horizontal bar chart of delivery percentage by local-content commitment category."
+          bodyClassName="p-5 h-64"
+        >
             {byCategory.length === 0 ? (
               <div className="flex items-center justify-center h-full text-ink-4 text-sm">No local-content commitments in this scope.</div>
             ) : (
@@ -132,8 +143,7 @@ export function LocalContentPage() {
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </div>
-        </div>
+        </ChartPanel>
 
         <div className="bg-surface rounded-xl border border-line shadow-card overflow-hidden">
           <div className="px-5 py-3 border-b border-line-soft bg-surface-2 flex items-center gap-2">

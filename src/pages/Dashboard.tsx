@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -11,7 +10,7 @@ import {
   AlertOctagon, AlertCircle, ShieldAlert, FileBarChart2,
 } from 'lucide-react';
 import { useCountry } from '@/context/CountryContext';
-import { useDataStore } from '@/store/dataStore';
+import { useStoreData } from '@/store/dataStore';
 import {
   getSystemMetrics, getRiskFlags, getComplianceTrend,
   getAllCountrySummaries, getOperatorById, getAgreementById,
@@ -21,6 +20,9 @@ import { MetricCard } from '@/components/shared/MetricCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CountryMap } from '@/components/shared/CountryMap';
 import { MorningBriefStrip } from '@/components/shared/MorningBriefStrip';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
+import { ChartPanel } from '@/components/shared/ChartPanel';
+import { InfoTip } from '@/components/shared/InfoTip';
 import { formatDate } from '@/lib/utils';
 import type { RiskFlag } from '@/data/types';
 
@@ -141,19 +143,23 @@ function Panel({ children, className = '' }: { children: React.ReactNode; classN
 }
 
 function PanelHeader({
-  title, subtitle, actions, accent = '#10B981'
+  title, subtitle, actions, accent = '#10B981', howToRead,
 }: {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
   accent?: string;
+  howToRead?: string;
 }) {
   return (
     <div className="px-6 py-5 flex items-center justify-between border-b border-line-soft bg-foreground/[0.01]">
       <div className="flex items-center gap-3">
         <span className="w-1 h-5 rounded-full shadow-glow" style={{ background: accent }} aria-hidden />
         <div>
-          <h2 className="text-[14px] font-bold tracking-wide text-foreground">{title}</h2>
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-[14px] font-bold tracking-wide text-foreground">{title}</h2>
+            {howToRead && <InfoTip title="How to read this" body={howToRead} label={`How to read: ${title}`} />}
+          </div>
           {subtitle && <p className="text-[12px] mt-0.5 text-ink-4 font-medium">{subtitle}</p>}
         </div>
       </div>
@@ -165,25 +171,24 @@ function PanelHeader({
 export function Dashboard() {
   const { selectedCountry } = useCountry();
   const navigate = useNavigate();
-  const dataVersion = useDataStore((state) => state.version);
 
   const countryId = selectedCountry === 'ALL' ? undefined : selectedCountry;
 
-  const metrics         = useMemo(() => getSystemMetrics(countryId),         [countryId, dataVersion]);
-  const trendData       = useMemo(() => getComplianceTrend(countryId),       [countryId, dataVersion]);
-  const countrySummaries = useMemo(() => getAllCountrySummaries(),            [dataVersion]);
-  const activity        = useMemo(() => buildActivityFeed(countryId),        [countryId, dataVersion]);
-  const deadlines       = useMemo(() => buildUpcomingDeadlines(countryId),   [countryId, dataVersion]);
+  const metrics         = useStoreData(() => getSystemMetrics(countryId),         [countryId]);
+  const trendData       = useStoreData(() => getComplianceTrend(countryId),       [countryId]);
+  const countrySummaries = useStoreData(() => getAllCountrySummaries(),            []);
+  const activity        = useStoreData(() => buildActivityFeed(countryId),        [countryId]);
+  const deadlines       = useStoreData(() => buildUpcomingDeadlines(countryId),   [countryId]);
 
-  const topFlags = useMemo(() =>
+  const topFlags = useStoreData(() =>
     getRiskFlags(countryId)
       .filter(f => f.status !== 'resolved')
       .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
       .slice(0, 8),
-    [countryId, dataVersion]
+    [countryId]
   );
 
-  const complianceDist = useMemo(() => {
+  const complianceDist = useStoreData(() => {
     const all = getCommitments();
     const filtered = countryId
       ? all.filter(c => {
@@ -199,12 +204,20 @@ export function Dashboard() {
       { name: 'At Risk',  value: counts['at-risk'],   color: COMPLIANCE_COLORS['at-risk'] },
       { name: 'Breached', value: counts.breached,     color: COMPLIANCE_COLORS.breached },
     ].filter(d => d.value > 0);
-  }, [countryId, dataVersion]);
+  }, [countryId]);
 
   const totalCommitmentsCount = complianceDist.reduce((s, d) => s + d.value, 0);
 
+  // Plain-English takeaway for the trend chart: direction over the window shown.
+  const trendDelta = trendData.length >= 2
+    ? Math.round(trendData[trendData.length - 1].rate - trendData[0].rate)
+    : 0;
+  const trendWord = trendDelta > 0 ? 'up' : trendDelta < 0 ? 'down' : 'flat';
+
   return (
     <div className="space-y-6">
+
+      <ModuleIntro />
 
       {/* ── AI Morning Brief — proactive 3-line situational read ─── */}
       <MorningBriefStrip />
@@ -218,6 +231,7 @@ export function Dashboard() {
             icon={<FileText size={18} />}
             accent="blue"
             onClick={() => navigate('/agreements')}
+            hint="How many mining contracts are currently in force in the selected scope. Click to see them all."
           />
         </div>
         <div data-ai-entity="metric:operators" data-ai-label="Operators monitored" data-ai-sub={`${metrics.totalOperators} operators in scope`}>
@@ -227,6 +241,7 @@ export function Dashboard() {
             icon={<Users size={18} />}
             accent="default"
             onClick={() => navigate('/performance')}
+            hint="The number of mining companies currently being tracked for compliance."
           />
         </div>
         <div data-ai-entity="metric:compliance-rate" data-ai-label="System compliance rate" data-ai-sub={`${metrics.systemComplianceRate}% across ${metrics.totalCommitments} commitments`}>
@@ -237,6 +252,7 @@ export function Dashboard() {
             icon={<Shield size={18} />}
             accent={metrics.systemComplianceRate >= 70 ? 'green' : 'amber'}
             onClick={() => navigate('/performance')}
+            hint="The share of all promises (commitments) that companies are currently keeping. Higher is better; below 70% shows amber."
           />
         </div>
         <div data-ai-entity="metric:critical-flags" data-ai-label="Critical flags" data-ai-sub={`${metrics.openCriticalFlags} critical · ${metrics.openHighFlags} high`}>
@@ -247,6 +263,7 @@ export function Dashboard() {
             icon={<AlertTriangle size={18} />}
             accent={metrics.openCriticalFlags > 0 ? 'red' : 'green'}
             onClick={() => navigate('/risk')}
+            hint="Open risk alerts at the most serious level that need attention now. Click to investigate them."
           />
         </div>
         <div data-ai-entity="metric:breached-commitments" data-ai-label="Breached commitments" data-ai-sub={`${metrics.breachedCommitments} breached · ${metrics.atRiskCommitments} at-risk`}>
@@ -257,6 +274,7 @@ export function Dashboard() {
             icon={<TrendingUp size={18} />}
             accent={metrics.breachedCommitments > 0 ? 'amber' : 'green'}
             onClick={() => navigate('/performance')}
+            hint="Promises that have already been broken. The sub-figure shows how many more are slipping (at-risk)."
           />
         </div>
       </div>
@@ -267,6 +285,7 @@ export function Dashboard() {
           <PanelHeader
             title="Operator & Mine Locations"
             subtitle="Colour indicates operator compliance status"
+            howToRead="Each pin is a mine. Its colour shows how well that company is keeping its commitments — green is healthy, red means breaches. Use the legend below."
           />
           <div className="flex-1 min-h-[300px] relative">
             <CountryMap countryId={countryId} />
@@ -286,17 +305,17 @@ export function Dashboard() {
           </div>
         </Panel>
 
-        <Panel className="lg:col-span-2">
-          <PanelHeader
-            title="System Compliance Trend"
-            subtitle="% commitments on-track or met by period"
-            accent="#F59E0B"
-          />
-          <div
-            className="p-5 flex-1 min-h-[300px]"
-            role="img"
-            aria-label={`Compliance trend over ${trendData.length} periods.`}
-          >
+        <ChartPanel
+          className="lg:col-span-2"
+          title="System Compliance Trend"
+          caption="How the share of kept promises has moved over recent periods."
+          howToRead="Each point is one period. A rising line means companies are keeping more of their commitments over time; a falling line means compliance is slipping."
+          accent="#F59E0B"
+          ariaLabel={`Compliance trend over ${trendData.length} periods.`}
+          bodyClassName="p-5 min-h-[300px]"
+          aiRegion="System Compliance Trend"
+          takeaway={`Compliance is at ${metrics.systemComplianceRate}% — ${trendWord === 'flat' ? 'broadly flat' : `${trendWord} ${Math.abs(trendDelta)} point${Math.abs(trendDelta) === 1 ? '' : 's'}`} over the period shown.`}
+        >
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 10, right: 10, bottom: 0, left: -16 }}>
                 <defs>
@@ -332,21 +351,23 @@ export function Dashboard() {
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </Panel>
+        </ChartPanel>
       </div>
 
       {/* ── Donut + Country Overview + Risk Flags ─────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
         {/* Left: Donut + Country Overview */}
-        <Panel className="lg:col-span-2">
-          <PanelHeader
-            title="Commitment Distribution"
-            subtitle={`Breakdown of ${totalCommitmentsCount} active commitments`}
-            accent="#3B82F6"
-          />
-          <div className="p-6 flex items-center gap-6">
+        <div className="lg:col-span-2 flex flex-col gap-5">
+        <ChartPanel
+          title="Commitment Distribution"
+          caption={`How the ${totalCommitmentsCount} active commitments split across statuses.`}
+          howToRead="The ring shows the mix of commitment statuses. The big number in the middle is the overall compliance rate — the share that are met or on-track."
+          accent="#3B82F6"
+          aiRegion="Commitment Distribution"
+          bodyClassName="p-6"
+        >
+          <div className="flex items-center gap-6">
             <div
               className="relative shrink-0 drop-shadow-md"
               style={{ width: 140, height: 140 }}
@@ -391,11 +412,16 @@ export function Dashboard() {
               ))}
             </div>
           </div>
+        </ChartPanel>
 
-          {/* Country overview */}
-          <div className="border-t border-line-soft bg-surface">
-            <PanelHeader title="Country Overview" accent="#8B5CF6" />
-            <div className="divide-y divide-line-soft">
+        {/* Country overview */}
+        <Panel>
+          <PanelHeader
+            title="Country Overview"
+            accent="#8B5CF6"
+            howToRead="A quick compliance read per country: the percentage of commitments kept, plus how many agreements, operators, and critical alerts each one has."
+          />
+          <div className="divide-y divide-line-soft">
               {countrySummaries.map(cs => (
                 <div key={cs.countryId} className="px-6 py-4 hover:bg-foreground/[0.02] transition-colors">
                   <div className="flex items-center justify-between mb-2">
@@ -435,8 +461,8 @@ export function Dashboard() {
                 </div>
               ))}
             </div>
-          </div>
         </Panel>
+        </div>
 
         {/* Right: Priority Risk Flags */}
         <Panel className="lg:col-span-3">
@@ -444,6 +470,7 @@ export function Dashboard() {
             title="Priority Risk Flags"
             subtitle="Sorted by severity — click to investigate"
             accent="#EF4444"
+            howToRead="The most serious open alerts first. Each row names the company and the issue; click one to see the rule and evidence behind it."
             actions={
               <button
                 onClick={() => navigate('/risk')}
@@ -480,6 +507,7 @@ export function Dashboard() {
             title="Active Commitment Tracking"
             subtitle="Breached & at-risk first · Click to view scorecard"
             accent="#F59E0B"
+            howToRead="Promises with a deadline, most urgent first. The coloured pill shows days remaining — a red “+N” means it is already overdue."
             actions={<Calendar size={16} className="text-ink-4" />}
           />
           <div className="divide-y divide-line-soft">
@@ -550,6 +578,7 @@ export function Dashboard() {
           <PanelHeader
             title="Recent Activity"
             subtitle="Latest system events"
+            howToRead="A live feed of the latest changes and alerts across the platform, newest at the top."
             actions={<Activity size={16} className="text-ink-4" />}
           />
           <ol className="divide-y divide-line-soft flex-1">

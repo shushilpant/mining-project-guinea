@@ -5,11 +5,12 @@ import {
   getConcessionConflicts, getProtectedZones
 } from '@/services/dataService';
 import { useCountry } from '@/context/CountryContext';
-import { useDataStore } from '@/store/dataStore';
+import { useStoreData } from '@/store/dataStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { mutationService } from '@/services/mutationService';
 import { useRole } from '@/hooks/useRole';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { StatusDropdown } from '@/components/shared/StatusDropdown';
 import { MetricCard } from '@/components/shared/MetricCard';
@@ -39,11 +40,10 @@ export function RiskPage() {
   const [severityFilter, setSeverityFilter] = useState<RiskSeverity | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<RiskFlagStatus | 'active'>('active');
   const [showThresholds, setShowThresholds] = useState(false);
-  const dataVersion = useDataStore((state) => state.version);
   const { riskThresholds: thresholds, updateThresholds, resetThresholds } = useSettingsStore();
 
   const countryId = selectedCountry === 'ALL' ? undefined : selectedCountry;
-  const allFlags = useMemo(() => getRiskFlags(countryId, thresholds), [countryId, thresholds, dataVersion]);
+  const allFlags = useStoreData(() => getRiskFlags(countryId, thresholds), [countryId, thresholds]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -67,16 +67,17 @@ export function RiskPage() {
   const high = openFlags.filter(f => f.severity === 'high').length;
   const medium = openFlags.filter(f => f.severity === 'medium').length;
   
-  const concessionConflicts = useMemo(() => getConcessionConflicts(countryId), [countryId, dataVersion]);
-  const protectedZones = useMemo(() => getProtectedZones(countryId), [countryId, dataVersion]);
+  const concessionConflicts = useStoreData(() => getConcessionConflicts(countryId), [countryId]);
+  const protectedZones = useStoreData(() => getProtectedZones(countryId), [countryId]);
 
   const [activeTab, setActiveTab] = useState<'flags' | 'conflicts'>('flags');
 
   return (
     <div>
       <PageHeader
-        title="Module 4 — Breach & Risk Detection"
-        subtitle="Probabilistic identification of latent, emerging or systemic breach patterns — every flag traces to a rule, evidence, and an explainable attribution · ACCI §6.4"
+        title="Risk Alerts"
+        subtitle="Automatic early warnings when something looks wrong."
+        badge="M4 · Breach & Risk Detection"
         actions={
           <button
             onClick={() => setShowThresholds(v => !v)}
@@ -93,6 +94,8 @@ export function RiskPage() {
           </button>
         }
       />
+
+      <ModuleIntro />
 
       {/* Configurable thresholds */}
       {showThresholds && (
@@ -158,10 +161,10 @@ export function RiskPage() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-        <MetricCard label="Critical" value={critical} accent="red" />
-        <MetricCard label="High Severity" value={high} accent="amber" />
-        <MetricCard label="Medium Severity" value={medium} accent="amber" />
-        <MetricCard label="Total Open" value={openFlags.length} accent="default" />
+        <MetricCard label="Critical" value={critical} accent="red" hint="Open alerts at the most serious level — these need action now." />
+        <MetricCard label="High Severity" value={high} accent="amber" hint="Serious open alerts that should be reviewed soon." />
+        <MetricCard label="Medium Severity" value={medium} accent="amber" hint="Open alerts worth keeping an eye on." />
+        <MetricCard label="Total Open" value={openFlags.length} accent="default" hint="All unresolved alerts in scope, across every severity level." />
       </div>
 
       {/* Semantic anomaly scan — surfaces patterns the rule engine doesn't catch */}
@@ -192,8 +195,8 @@ export function RiskPage() {
       {activeTab === 'conflicts' && (
         <div className="space-y-4 fade-in">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MetricCard label="Total Overlaps" value={concessionConflicts.length} icon={<Map size={16} />} accent={concessionConflicts.length > 0 ? "red" : "green"} />
-            <MetricCard label="Protected Zones" value={protectedZones.length} icon={<Map size={16} />} accent="default" />
+            <MetricCard label="Total Overlaps" value={concessionConflicts.length} icon={<Map size={16} />} accent={concessionConflicts.length > 0 ? "red" : "green"} hint="Places where two mining licence areas (concessions) overlap on the map — a potential dispute or double-allocation." />
+            <MetricCard label="Protected Zones" value={protectedZones.length} icon={<Map size={16} />} accent="default" hint="Environmentally or legally protected areas that mining concessions should not encroach on." />
             <MetricCard label="Critical Severity" value={concessionConflicts.filter(c => c.severity === 'critical').length} icon={<AlertOctagon size={16} />} accent="red" />
           </div>
           
@@ -383,9 +386,7 @@ export function RiskPage() {
 export function RiskFlagDetailPage() {
   const { flagId } = useParams<{ flagId: string }>();
   const navigate = useNavigate();
-  const dataVersion = useDataStore((state) => state.version);
-
-  const flag = useMemo(() => (flagId ? getRiskFlagById(flagId) : undefined), [flagId, dataVersion]);
+  const flag = useStoreData(() => (flagId ? getRiskFlagById(flagId) : undefined), [flagId]);
 
   if (!flag) {
     return (

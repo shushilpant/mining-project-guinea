@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Legend,
@@ -9,9 +9,12 @@ import {
   getEITIReportReadiness, getEITIReportSections
 } from '@/services/dataService';
 import { useCountry } from '@/context/CountryContext';
-import { useDataStore } from '@/store/dataStore';
+import { useStoreData } from '@/store/dataStore';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { MetricCard } from '@/components/shared/MetricCard';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
+import { ChartPanel } from '@/components/shared/ChartPanel';
+import { GlossaryTerm } from '@/components/shared/GlossaryTerm';
 import { Printer, FileDown, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
@@ -73,16 +76,15 @@ const GovTooltip = ({
 export function TransparencyPage() {
   const { selectedCountry } = useCountry();
   const printRef = useRef<HTMLDivElement>(null);
-  const dataVersion = useDataStore((state) => state.version);
 
   const countryId = selectedCountry === 'ALL' ? undefined : selectedCountry;
 
-  const countrySummaries = useMemo(() => getAllCountrySummaries(), [dataVersion]);
-  const scorecards = useMemo(() => getAllOperatorScorecards(countryId), [countryId, dataVersion]);
-  const countries = useMemo(() => getCountries(), [dataVersion]);
-  const systemMetrics = useMemo(() => getSystemMetrics(countryId), [countryId, dataVersion]);
+  const countrySummaries = useStoreData(() => getAllCountrySummaries(), []);
+  const scorecards = useStoreData(() => getAllOperatorScorecards(countryId), [countryId]);
+  const countries = useStoreData(() => getCountries(), []);
+  const systemMetrics = useStoreData(() => getSystemMetrics(countryId), [countryId]);
 
-  const crossCountry = useMemo(() => {
+  const crossCountry = useStoreData(() => {
     return countries.map(c => {
       const agreements = getAgreements(c.id).filter(a => a.status === 'active');
       const operators = getOperators(c.id);
@@ -110,9 +112,9 @@ export function TransparencyPage() {
         regulatoryFramework: c.regulatoryFramework,
       };
     });
-  }, [countries, dataVersion]);
+  }, [countries]);
 
-  const eitiData = useMemo(() => {
+  const eitiData = useStoreData(() => {
     return EITI_CATEGORIES.map(cat => {
       const entry: Record<string, string | number> = { category: cat.label };
       for (const c of countries) {
@@ -130,17 +132,17 @@ export function TransparencyPage() {
       }
       return entry;
     });
-  }, [countries, dataVersion]);
+  }, [countries]);
 
-  const reportReadiness = useMemo(() => {
+  const reportReadiness = useStoreData(() => {
     if (countryId) return getEITIReportReadiness(countryId);
     return getEITIReportReadiness('GIN'); // Default fallback
-  }, [countryId, dataVersion]);
+  }, [countryId]);
 
-  const reportSections = useMemo(() => {
+  const reportSections = useStoreData(() => {
     if (countryId) return getEITIReportSections(countryId);
     return getEITIReportSections('GIN'); // Default fallback
-  }, [countryId, dataVersion]);
+  }, [countryId]);
 
   const handlePrint = () => window.print();
   
@@ -180,8 +182,9 @@ export function TransparencyPage() {
   return (
     <div ref={printRef}>
       <PageHeader
-        title="Module 5 — Transparency & Reporting"
-        subtitle="Stakeholder-facing dashboards aligned to the 2023 EITI Standard and the OCDS Resource Contracts extension · ACCI §6.5"
+        title="Public Reporting"
+        subtitle="The figures we publish openly, and how each country scores."
+        badge="M5 · Transparency & Reporting"
         actions={
           <button
             onClick={handlePrint}
@@ -193,23 +196,28 @@ export function TransparencyPage() {
         }
       />
 
+      <ModuleIntro />
+
       {/* System-wide summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <MetricCard
           label="System Compliance"
           value={`${systemMetrics.systemComplianceRate}%`}
           accent={systemMetrics.systemComplianceRate >= 70 ? 'green' : 'amber'}
+          hint="The share of all commitments being kept across every country in scope. Higher is better."
         />
-        <MetricCard label="Active Agreements" value={systemMetrics.totalActiveAgreements} accent="blue" />
+        <MetricCard label="Active Agreements" value={systemMetrics.totalActiveAgreements} accent="blue" hint="Total mining contracts currently in force across the region." />
         <MetricCard
           label="Breached Commitments"
           value={systemMetrics.breachedCommitments}
           accent={systemMetrics.breachedCommitments > 0 ? 'red' : 'green'}
+          hint="Promises that have already been broken across all tracked agreements."
         />
         <MetricCard
           label="Critical Flags"
           value={systemMetrics.openCriticalFlags}
           accent={systemMetrics.openCriticalFlags > 0 ? 'red' : 'green'}
+          hint="Open risk alerts at the most serious level, region-wide."
         />
       </div>
 
@@ -281,12 +289,15 @@ export function TransparencyPage() {
       </div>
 
       {/* EITI compliance bar chart */}
-      <div className="bg-surface rounded-xl border border-line shadow-card mb-5 overflow-hidden">
-        <div className="px-5 py-3 border-b border-line-soft bg-surface-2">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">EITI-Aligned Compliance by Category</h2>
-          <p className="text-[11px] mt-0.5 text-ink-4">Compliance rates by commitment type, broken down by country</p>
-        </div>
-        <div className="p-5 h-72" role="img" aria-label="Grouped bar chart of EITI-aligned compliance rates by category for Guinea, Ghana, and Côte d'Ivoire.">
+      <ChartPanel
+        className="mb-5"
+        title="Compliance by Category (EITI-aligned)"
+        caption="Compliance rates by commitment type, compared across countries."
+        howToRead="Bars are grouped by category, one colour per country. Taller bars mean better compliance in that theme — handy for seeing which country leads or lags on each one."
+        aiRegion="EITI-Aligned Compliance by Category"
+        ariaLabel="Grouped bar chart of EITI-aligned compliance rates by category for Guinea, Ghana, and Côte d'Ivoire."
+        bodyClassName="p-5 h-72"
+      >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={eitiData} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#EBF0E6" vertical={false} />
@@ -313,8 +324,7 @@ export function TransparencyPage() {
               ))}
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      </div>
+      </ChartPanel>
 
       {/* Country summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
@@ -361,12 +371,15 @@ export function TransparencyPage() {
       </div>
 
       {/* Operator scorecards horizontal bar chart */}
-      <div className="bg-surface rounded-xl border border-line shadow-card mb-5 overflow-hidden">
-        <div className="px-5 py-3 border-b border-line-soft bg-surface-2">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">Operator Compliance Scorecards</h2>
-          <p className="text-[11px] mt-0.5 text-ink-4">Side-by-side comparison — all operators, sorted by compliance rate</p>
-        </div>
-        <div className="p-5" role="img" aria-label={`Horizontal bar chart ranking ${scorecards.length} operators by compliance rate.`}>
+      <ChartPanel
+        className="mb-5"
+        title="Operator Compliance Scorecards"
+        caption="Every operator ranked side by side, lowest compliance first."
+        howToRead="Each bar is one mining company; longer bars keep more of their promises. Bar colour shows the country. The companies needing attention sit at the top."
+        aiRegion="Operator Compliance Scorecards"
+        ariaLabel={`Horizontal bar chart ranking ${scorecards.length} operators by compliance rate.`}
+        bodyClassName="p-5"
+      >
           <ResponsiveContainer width="100%" height={Math.max(200, scorecards.length * 30)}>
             <BarChart
               data={scorecards
@@ -417,8 +430,7 @@ export function TransparencyPage() {
               </div>
             ))}
           </div>
-        </div>
-      </div>
+      </ChartPanel>
 
       {/* Cross-Country Governance Insights — comparative synthesis per markdown.md §5.4 */}
       <div className="bg-surface rounded-xl border border-line shadow-card p-5">
@@ -477,7 +489,7 @@ export function TransparencyPage() {
       <div className="bg-surface rounded-xl border border-line shadow-card p-5 mt-5 print:hidden">
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">EITI Report Readiness</h2>
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2"><GlossaryTerm term="EITI">EITI</GlossaryTerm> Report Readiness</h2>
             <p className="text-[13px] font-medium text-ink mt-1">
               Automated compilation of national compliance and fiscal data
             </p>

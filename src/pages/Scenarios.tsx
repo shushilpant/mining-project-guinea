@@ -20,9 +20,11 @@ import {
   TrendingUp, SlidersHorizontal, Info,
 } from 'lucide-react';
 import { useCountry } from '@/context/CountryContext';
-import { useDataStore } from '@/store/dataStore';
+import { useStoreData } from '@/store/dataStore';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { MetricCard } from '@/components/shared/MetricCard';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
+import { ChartPanel } from '@/components/shared/ChartPanel';
 import { CitedText } from '@/components/shared/CitedText';
 import { cn } from '@/lib/utils';
 import { getAgreements, getCommodityPrices } from '@/services/dataService';
@@ -58,7 +60,6 @@ const CACHE_TTL = 1000 * 60 * 60 * 12; // 12h
 
 export function ScenariosPage() {
   const { selectedCountry } = useCountry();
-  const dataVersion = useDataStore(s => s.version);
 
   // Scenario state. Reset scope when the global country selector changes
   // (React "adjust state on prop change" pattern).
@@ -82,16 +83,15 @@ export function ScenariosPage() {
     })), []);
 
   // Deterministic projection — recomputed live on any input change.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const baseline   = useMemo(() => computeProjection(baselineScenario(selectedCountry)), [selectedCountry, dataVersion]);
-  const projection = useMemo(() => computeProjection(scenario), [scenario, dataVersion]);
+  const baseline   = useStoreData(() => computeProjection(baselineScenario(selectedCountry)), [selectedCountry]);
+  const projection = useStoreData(() => computeProjection(scenario), [scenario]);
   const movers     = useMemo(() => topMovers(baseline, projection, 6), [baseline, projection]);
 
-  const scopeCommodities = useMemo(() => commoditiesInScope(selectedCountry), [selectedCountry, dataVersion]);
-  const scopeAgreements  = useMemo(
+  const scopeCommodities = useStoreData(() => commoditiesInScope(selectedCountry), [selectedCountry]);
+  const scopeAgreements  = useStoreData(
     () => getAgreements(selectedCountry === 'ALL' ? undefined : selectedCountry)
       .filter(a => a.status === 'active'),
-    [selectedCountry, dataVersion],
+    [selectedCountry],
   );
 
   const delta = projection.totalRoyaltyUsd - baseline.totalRoyaltyUsd;
@@ -126,8 +126,9 @@ export function ScenariosPage() {
   return (
     <div data-ai-region="fiscal-scenario-modelling">
       <PageHeader
-        title="Module 6 — Fiscal Scenario Modelling"
-        subtitle="Project state royalty take under hypothetical price, production and royalty-regime conditions · grounded in live agreement data · ACCI §6.6"
+        title="What-If Planner"
+        subtitle="Test how revenue changes if prices, taxes, or operators change."
+        badge="M6 · Fiscal Scenario Modelling"
         actions={
           <button
             onClick={() => setScenario(defaultScenario(selectedCountry))}
@@ -139,7 +140,9 @@ export function ScenariosPage() {
           </button>
         }
       />
-      
+
+      <ModuleIntro />
+
       {/* ── Tabs ────────────────────────────────────────────── */}
       <div className="flex border-b border-line mb-5">
         <button
@@ -287,15 +290,15 @@ export function ScenariosPage() {
           </div>
 
           {/* By-country chart */}
-          <div className="bg-surface rounded-xl border border-line shadow-card overflow-hidden">
-            <div className="px-5 py-3 border-b border-line-soft bg-surface-2 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">Royalty take by country</h2>
-                <p className="text-[11px] mt-0.5 text-ink-4">Baseline vs scenario · annual state ad-valorem take</p>
-              </div>
-              <TrendingUp size={15} className="text-ink-4 shrink-0" />
-            </div>
-            <div className="p-5 h-64" role="img" aria-label="Grouped bar chart comparing baseline and scenario royalty take by country.">
+          <ChartPanel
+            title="Royalty Take by Country"
+            caption="Today's baseline next to your scenario — annual government royalty income."
+            howToRead="Grey bars are today's revenue (the baseline); green bars are your what-if scenario. Where green is taller than grey, your changes would raise government income for that country."
+            aiRegion="Royalty take by country"
+            actions={<TrendingUp size={15} className="text-ink-4 shrink-0" />}
+            ariaLabel="Grouped bar chart comparing baseline and scenario royalty take by country."
+            bodyClassName="p-5 h-64"
+          >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 4 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#EBF0E6" vertical={false} />
@@ -310,8 +313,7 @@ export function ScenariosPage() {
                   <Bar dataKey="Scenario" fill="#006b3f" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
-          </div>
+          </ChartPanel>
 
           {/* By-commodity + top movers */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -806,17 +808,19 @@ function StressTestPanel({ scopeAgreements }: { scopeAgreements: Agreement[] }) 
         </div>
         
         {historicalPrices.length > 0 && (
-          <div className="bg-surface rounded-xl border border-line shadow-card overflow-hidden">
-            <div className="px-5 py-3 border-b border-line-soft bg-surface-2 flex items-center justify-between">
-              <div>
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">Historical Price Ticker</h2>
-                <p className="text-[11px] mt-0.5 text-ink-4">Synthetic 24-month LME data</p>
-              </div>
+          <ChartPanel
+            title="Historical Price Ticker"
+            caption="The commodity's price over the last 24 months."
+            howToRead="The line traces the commodity price month by month. A jagged line means a volatile price — useful context when you decide how hard to stress-test it."
+            aiRegion="Historical Price Ticker"
+            actions={
               <div className="font-mono font-bold text-[18px] text-ink tracking-tight">
                 ${currentPrice.toLocaleString()} <span className="text-[10px] text-ink-4 uppercase align-top ml-1">USD</span>
               </div>
-            </div>
-            <div className="h-32 p-3">
+            }
+            ariaLabel="Area chart of the commodity's price over the last 24 months."
+            bodyClassName="h-32 p-3"
+          >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={historicalPrices}>
                   <defs>
@@ -832,8 +836,7 @@ function StressTestPanel({ scopeAgreements }: { scopeAgreements: Agreement[] }) 
                   <Area type="monotone" dataKey="pricePerUnit" stroke="#D97706" fillOpacity={1} fill="url(#colorPrice)" />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-          </div>
+          </ChartPanel>
         )}
         
         <div className="bg-surface rounded-xl border border-line shadow-card overflow-hidden">

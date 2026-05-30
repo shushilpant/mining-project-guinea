@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Lock, User, ShieldCheck, AlertCircle, ArrowRight, Check } from 'lucide-react';
 
-// Mirrors the five ACCI modules specified in markdown.md §6 so the
-// landing copy stays in lock-step with the manuscript's architecture.
+// Plain-language landing copy — the same friendly module names used
+// across the app (see src/content/guide.ts).
 const FEATURES = [
-  'M1 · Contract & Agreement Intelligence — clause ontology over mineral conventions',
-  'M2 · Negotiation Intelligence — IGF / EITI / OECD-benchmarked scenario simulation',
-  'M3 · Performance & Compliance Monitoring — continuous, exception-based assurance',
-  'M4 · Breach & Risk Detection — probabilistic models with SHAP-style explainability',
-  'M5 · Transparency & Reporting — EITI 2023 + OCDS Resource Contracts disclosure',
+  'Mining Agreements — every contract with mining companies, in one place',
+  'Company Scorecards — see who keeps their promises, and who doesn’t',
+  'Risk Alerts — automatic early warnings when something looks wrong',
+  'What-If Planner — test how price or tax changes affect revenue',
+  'Who Owns What — trace the real people behind each company',
 ];
 
 export function Login() {

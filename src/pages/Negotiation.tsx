@@ -8,12 +8,14 @@ import {
   getOperatorById,
 } from '@/services/dataService';
 import { useCountry } from '@/context/CountryContext';
-import { useDataStore } from '@/store/dataStore';
+import { useStoreData } from '@/store/dataStore';
 import { useRole } from '@/hooks/useRole';
 import { mutationService } from '@/services/mutationService';
 import { Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { MetricCard } from '@/components/shared/MetricCard';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
+import { ChartPanel } from '@/components/shared/ChartPanel';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { cn, formatMillions } from '@/lib/utils';
 import type { Commodity } from '@/data/types';
@@ -37,13 +39,12 @@ const COUNTRY_NAMES: Record<string, string> = { GIN: 'Guinea', GHA: 'Ghana', CIV
 export function NegotiationPage() {
   const { selectedCountry } = useCountry();
   const [selectedCommodity, setSelectedCommodity] = useState<Commodity | 'all'>('all');
-  const dataVersion = useDataStore(state => state.version);
   const { isAdmin } = useRole();
 
   const countryId = selectedCountry === 'ALL' ? undefined : selectedCountry;
 
-  const allAgreements = useMemo(() => getAgreements(countryId).filter(a => a.status === 'active'), [countryId, dataVersion]);
-  const benchmarkedAgreements = useMemo(() => getAgreementsWithBenchmark(countryId), [countryId, dataVersion]);
+  const allAgreements = useStoreData(() => getAgreements(countryId).filter(a => a.status === 'active'), [countryId]);
+  const benchmarkedAgreements = useStoreData(() => getAgreementsWithBenchmark(countryId), [countryId]);
 
   const commodities = useMemo(() => {
     return Array.from(new Set(allAgreements.map(a => a.commodity))).sort();
@@ -54,10 +55,10 @@ export function NegotiationPage() {
     return benchmarkedAgreements.filter(a => a.commodity === selectedCommodity);
   }, [benchmarkedAgreements, selectedCommodity]);
 
-  const benchmarkStats = useMemo(() => {
+  const benchmarkStats = useStoreData(() => {
     const commodity = selectedCommodity === 'all' ? undefined : selectedCommodity;
     return getRoyaltyBenchmarks(commodity, countryId);
-  }, [selectedCommodity, countryId, dataVersion]);
+  }, [selectedCommodity, countryId]);
 
   // Historical trend: royalty rates by year signed
   const historicalTrend = useMemo(() => {
@@ -92,17 +93,20 @@ export function NegotiationPage() {
   return (
     <div>
       <PageHeader
-        title="Module 2 — Negotiation Intelligence"
-        subtitle="State-side negotiation support through EITI / IGF MPF / OECD / NRGI benchmarking, IMF DIGNAR-type scenario simulation, and IFC PS-mapped clause recommendations · ACCI §6.2"
+        title="Deal Benchmarking"
+        subtitle="Check whether our royalty deals are fair compared with similar ones."
+        badge="M2 · Negotiation Intelligence"
       />
+
+      <ModuleIntro />
 
       {/* Benchmark stats */}
       {benchmarkStats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <MetricCard label="Median Royalty" value={`${benchmarkStats.median}%`} accent="blue" sub={`${benchmarkStats.count} agreements`} />
-          <MetricCard label="Average Royalty" value={`${benchmarkStats.avg.toFixed(1)}%`} accent="default" />
-          <MetricCard label="Lowest Rate" value={`${benchmarkStats.min}%`} accent="amber" sub="Worth reviewing" />
-          <MetricCard label="Highest Rate" value={`${benchmarkStats.max}%`} accent="green" sub="Best achieved" />
+          <MetricCard label="Median Royalty" value={`${benchmarkStats.median}%`} accent="blue" sub={`${benchmarkStats.count} agreements`} hint="The middle royalty rate across these agreements — half pay more, half pay less. A useful 'typical' figure." />
+          <MetricCard label="Average Royalty" value={`${benchmarkStats.avg.toFixed(1)}%`} accent="default" hint="The simple average royalty rate across the agreements in scope." />
+          <MetricCard label="Lowest Rate" value={`${benchmarkStats.min}%`} accent="amber" sub="Worth reviewing" hint="The lowest royalty rate found — often the best candidate to renegotiate upward." />
+          <MetricCard label="Highest Rate" value={`${benchmarkStats.max}%`} accent="green" sub="Best achieved" hint="The highest royalty rate achieved — a reference for what is possible." />
         </div>
       )}
 
@@ -130,9 +134,14 @@ export function NegotiationPage() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {/* Royalty rate vs contract value scatter */}
-        <div className="bg-surface rounded-xl border border-line shadow-card p-4">
-          <div className="text-sm font-semibold text-ink mb-1">Royalty Rate vs Contract Value</div>
-          <div className="text-xs text-ink-4 mb-3">Each dot is an active agreement — hover for details</div>
+        <ChartPanel
+          title="Royalty Rate vs Contract Value"
+          caption="Each dot is an active agreement — hover for details."
+          howToRead="Left–right is the royalty rate the government gets; up–down is the contract's value. Dots low and to the left are big-value deals paying little — the ones most worth a second look. Colour shows the mineral."
+          aiRegion="Royalty Rate vs Contract Value"
+          ariaLabel="Scatter plot of royalty rate against contract value for active agreements."
+          bodyClassName="p-4"
+        >
           <ResponsiveContainer width="100%" height={220}>
             <ScatterChart margin={{ top: 4, right: 8, bottom: 8, left: -16 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -179,12 +188,17 @@ export function NegotiationPage() {
               </div>
             ))}
           </div>
-        </div>
+        </ChartPanel>
 
         {/* Historical trend */}
-        <div className="bg-surface rounded-xl border border-line shadow-card p-4">
-          <div className="text-sm font-semibold text-ink mb-1">Average Royalty Rate — Historical Trend</div>
-          <div className="text-xs text-ink-4 mb-3">By year of agreement signing — are terms improving?</div>
+        <ChartPanel
+          title="Average Royalty Rate — Historical Trend"
+          caption="By year of signing — are the terms we agree improving?"
+          howToRead="The line is the average royalty rate by the year deals were signed. A rising line means newer agreements secure better terms. The dashed line marks the median for comparison."
+          aiRegion="Average Royalty Rate Historical Trend"
+          ariaLabel="Line chart of average royalty rate by year of agreement signing."
+          bodyClassName="p-4"
+        >
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={historicalTrend} margin={{ top: 4, right: 8, bottom: 4, left: -16 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#EBF0E6" />
@@ -195,7 +209,7 @@ export function NegotiationPage() {
               <Line type="monotone" dataKey="avgRate" stroke="#006b3f" strokeWidth={2} dot={{ r: 4, fill: '#006b3f' }} />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </ChartPanel>
       </div>
 
       {/* Agreement benchmarking table */}

@@ -16,6 +16,7 @@ import {
   type ReviewStatus,
 } from '@/store/auditStore';
 import { useRole } from '@/hooks/useRole';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -604,7 +605,7 @@ export function AuditMonitorPage() {
 
   const prevLen = useRef(entries.length);
 
-  useEffect(() => { seedIfEmpty(); }, []);
+  useEffect(() => { seedIfEmpty(); }, [seedIfEmpty]);
 
   // Tick elapsed times
   useEffect(() => {
@@ -622,6 +623,9 @@ export function AuditMonitorPage() {
       return () => clearTimeout(t);
     }
     prevLen.current = entries.length;
+    // Intentionally keyed on the count, not the array identity: we only flash
+    // when new entries are *added*, not when existing ones are edited.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries.length]);
 
   // Scroll focused entry into view
@@ -739,10 +743,10 @@ export function AuditMonitorPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold leading-tight" style={{ color: FOREST }}>
-                Audit Log &amp; Compliance Review
+                Activity Log
               </h1>
               <p className="text-[11px] text-ink-3 mt-0.5">
-                Review, flag, and sign off all system changes before compliance reporting
+                A running record of every action taken in the platform — review, flag, and sign off.
               </p>
             </div>
             <div
@@ -782,6 +786,8 @@ export function AuditMonitorPage() {
           )}
         </div>
       </div>
+
+      <ModuleIntro />
 
       {/* ── Compliance progress bar ───────────────────────────────────────────── */}
       {entries.length > 0 && (

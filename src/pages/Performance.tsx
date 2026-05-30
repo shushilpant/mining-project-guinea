@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useDataStore } from '@/store/dataStore';
+import { useDataStore, useStoreData } from '@/store/dataStore';
 import { useRole } from '@/hooks/useRole';
 import { EditModal } from '@/components/shared/EditModal';
 import { StatusDropdown } from '@/components/shared/StatusDropdown';
@@ -19,6 +19,8 @@ import { useCountry } from '@/context/CountryContext';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { MetricCard } from '@/components/shared/MetricCard';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
+import { ChartPanel } from '@/components/shared/ChartPanel';
 import { ArrowLeft, Search, Pencil } from 'lucide-react';
 import type { CommitmentType, ComplianceStatus } from '@/data/types';
 import { cn } from '@/lib/utils';
@@ -44,28 +46,27 @@ export function PerformancePage() {
   const { selectedCountry } = useCountry();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const dataVersion = useDataStore(state => state.version);
   const { isAdmin } = useRole();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<{ id: string; riskScore: number; complianceStatus: string } | null>(null);
 
   const countryId = selectedCountry === 'ALL' ? undefined : selectedCountry;
-  const scorecards = useMemo(() => getAllOperatorScorecards(countryId), [countryId, dataVersion]);
+  const scorecards = useStoreData(() => getAllOperatorScorecards(countryId), [countryId]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return scorecards.filter(s => !q || s.operatorName.toLowerCase().includes(q));
   }, [scorecards, search]);
 
-  const commitments = useMemo(() => {
+  const commitments = useStoreData(() => {
     void getAgreements;
     if (countryId) return getCommitmentsForCountry(countryId);
     return (['GIN', 'GHA', 'CIV'] as const).flatMap(c => getCommitmentsForCountry(c));
-  }, [countryId, dataVersion]);
+  }, [countryId]);
   void commitments;
 
-  const typeBreakdown = useMemo(() => {
+  const typeBreakdown = useStoreData(() => {
     const all = countryId
       ? getCommitmentsForCountry(countryId)
       : (['GIN', 'GHA', 'CIV'] as const).flatMap(c => getCommitmentsForCountry(c));
@@ -84,7 +85,7 @@ export function PerformancePage() {
         rate: cmts.length > 0 ? Math.round((good / cmts.length) * 100) : 100,
       };
     }).filter(t => t.total > 0);
-  }, [countryId, dataVersion]);
+  }, [countryId]);
 
   const avgCompliance = filtered.length > 0
     ? Math.round(filtered.reduce((s, sc) => s + sc.complianceRate, 0) / filtered.length)
@@ -93,17 +94,24 @@ export function PerformancePage() {
   return (
     <div>
       <PageHeader
-        title="Module 3 — Performance & Compliance Monitoring"
-        subtitle="Real-time, exception-based monitoring of contractual obligations against operational data streams · ACCI §6.3"
+        title="Company Scorecards"
+        subtitle="How well each mining company keeps the promises it made."
+        badge="M3 · Performance & Compliance Monitoring"
       />
 
+      <ModuleIntro />
+
       {/* Commitment type breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 items-start">
         {/* Progress bars */}
-        <div className="bg-surface rounded-xl border border-line shadow-card p-4 lg:col-span-1">
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-3 text-ink-3">
-            Compliance by Commitment Type
-          </div>
+        <ChartPanel
+          className="lg:col-span-1"
+          title="Compliance by Commitment Type"
+          caption="The share of each kind of promise that is being kept."
+          howToRead="Each bar is a category of promise (jobs, infrastructure, environment, and so on). A longer, greener bar means more of those are on track; amber means it has dropped below 70%."
+          aiRegion="Compliance by Commitment Type"
+          bodyClassName="p-4"
+        >
           <div className="space-y-3">
             {typeBreakdown.map(t => (
               <div key={t.type}>
@@ -129,14 +137,18 @@ export function PerformancePage() {
               </div>
             ))}
           </div>
-        </div>
+        </ChartPanel>
 
         {/* Radar chart */}
-        <div className="bg-surface rounded-xl border border-line shadow-card p-4 lg:col-span-2">
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-2 text-ink-3">
-            Compliance Radar — All Commitment Types
-          </div>
-          <div role="img" aria-label={`Compliance radar across commitment types: ${typeBreakdown.map(t => `${t.type} ${t.rate}%`).join(', ')}.`}>
+        <ChartPanel
+          className="lg:col-span-2"
+          title="Compliance Radar"
+          caption="All commitment types at a glance — the bigger the shape, the better."
+          howToRead="Each spoke is one commitment type, scored 0–100%. A large, even shape means strong all-round compliance; a dented spoke points to a weak area to focus on."
+          aiRegion="Compliance Radar"
+          ariaLabel={`Compliance radar across commitment types: ${typeBreakdown.map(t => `${t.type} ${t.rate}%`).join(', ')}.`}
+          bodyClassName="p-4"
+        >
           <ResponsiveContainer width="100%" height={200}>
             <RadarChart data={typeBreakdown}>
               <defs>
@@ -159,8 +171,7 @@ export function PerformancePage() {
               />
             </RadarChart>
           </ResponsiveContainer>
-          </div>
-        </div>
+        </ChartPanel>
       </div>
 
       {/* Operator scorecards table */}

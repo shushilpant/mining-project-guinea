@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useCountry } from '@/context/CountryContext';
-import { useDataStore } from '@/store/dataStore';
+import { useStoreData } from '@/store/dataStore';
 import { getOperators, getPEPExposure, getBeneficialOwnerTree } from '@/services/dataService';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
+import { GlossaryTerm } from '@/components/shared/GlossaryTerm';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { Users, AlertTriangle, Search, ChevronRight, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,17 +12,16 @@ import type { BeneficialOwnerNode } from '@/data/types';
 
 export function OwnershipPage() {
   const { selectedCountry } = useCountry();
-  const dataVersion = useDataStore((state) => state.version);
   const countryId = selectedCountry === 'ALL' ? undefined : selectedCountry;
 
-  const operators = useMemo(() => getOperators(countryId), [countryId, dataVersion]);
-  const pepExposure = useMemo(() => getPEPExposure(countryId), [countryId, dataVersion]);
-  const ownerTrees = useMemo(() => {
+  const operators = useStoreData(() => getOperators(countryId), [countryId]);
+  const pepExposure = useStoreData(() => getPEPExposure(countryId), [countryId]);
+  const ownerTrees = useStoreData(() => {
     return operators.reduce((acc, op) => {
       acc[op.id] = getBeneficialOwnerTree(op.id);
       return acc;
     }, {} as Record<string, BeneficialOwnerNode[]>);
-  }, [operators, dataVersion]);
+  }, [operators]);
 
   const totalOpaque = pepExposure.reduce((sum, exp) => sum + exp.opaqueEntities, 0);
   const totalPEPs = pepExposure.reduce((sum, exp) => sum + exp.pepCount, 0);
@@ -95,14 +96,17 @@ export function OwnershipPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Module 7 — Beneficial Ownership Tracker"
-        subtitle="Hierarchical ownership structures, PEP exposure, and opaque entity detection."
+        title="Who Owns What"
+        subtitle="Trace the real people who ultimately own each mining company."
+        badge="M7 · Beneficial Ownership"
       />
 
+      <ModuleIntro />
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MetricCard label="Monitored Operators" value={operators.length} icon={<Users size={16} />} accent="blue" />
-        <MetricCard label="PEP Exposures" value={totalPEPs} icon={<ShieldAlert size={16} />} accent={totalPEPs > 0 ? "red" : "green"} />
-        <MetricCard label="Opaque Entities" value={totalOpaque} icon={<AlertTriangle size={16} />} accent={totalOpaque > 0 ? "amber" : "green"} />
+        <MetricCard label="Monitored Operators" value={operators.length} icon={<Users size={16} />} accent="blue" hint="Companies whose ownership chain is being tracked in this scope." />
+        <MetricCard label="PEP Exposures" value={totalPEPs} icon={<ShieldAlert size={16} />} accent={totalPEPs > 0 ? "red" : "green"} hint="Owners who are politically-exposed people — in or close to public power, so their ownership warrants extra scrutiny." />
+        <MetricCard label="Opaque Entities" value={totalOpaque} icon={<AlertTriangle size={16} />} accent={totalOpaque > 0 ? "amber" : "green"} hint="Companies in the ownership chain whose real owners can't be traced — often registered in secrecy jurisdictions." />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -167,11 +171,11 @@ export function OwnershipPage() {
               <div className="flex gap-3">
                 <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
                   <span className="w-2 h-2 rounded-full bg-destructive" />
-                  PEP Flag
+                  <GlossaryTerm term="PEP">PEP</GlossaryTerm> Flag
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-ink-3">
                   <span className="w-2 h-2 rounded-full bg-status-warning" />
-                  Opaque Entity
+                  <GlossaryTerm term="opaque entity">Opaque Entity</GlossaryTerm>
                 </div>
               </div>
             </div>

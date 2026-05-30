@@ -38,6 +38,7 @@ import {
 import { testProvider } from '@/services/aiService';
 import { DB, getRiskFlags, getOperators, getCountries } from '@/services/dataService';
 import { useDataStore } from '@/store/dataStore';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
 import type {
   Agreement,
   Operator,
@@ -168,15 +169,17 @@ export function AdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-ink">Admin Panel</h1>
+          <h1 className="text-xl font-bold text-ink">Settings &amp; Data</h1>
           <p className="text-sm text-ink-3 mt-0.5">
-            Data management, imports/exports, and system administration
+            Manage the underlying data, rules, and the AI assistant.
           </p>
         </div>
         <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full font-medium border border-blue-200">
           Administrator Session
         </span>
       </div>
+
+      <ModuleIntro />
 
       {/* Tab bar */}
       <div className="border-b border-line">

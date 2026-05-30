@@ -8,8 +8,9 @@ import {
 import { mutationService } from '@/services/mutationService';
 import { useCountry } from '@/context/CountryContext';
 import { useRole } from '@/hooks/useRole';
-import { useDataStore } from '@/store/dataStore';
+import { useDataStore, useStoreData } from '@/store/dataStore';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ModuleIntro } from '@/components/shared/ModuleIntro';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { StatusDropdown } from '@/components/shared/StatusDropdown';
 import { EditModal } from '@/components/shared/EditModal';
@@ -103,7 +104,6 @@ export function AgreementsPage() {
   const { selectedCountry } = useCountry();
   const navigate = useNavigate();
   const { isAdmin } = useRole();
-  const _version = useDataStore(state => state.version);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<AgreementStatus | 'all'>('all');
@@ -117,7 +117,7 @@ export function AgreementsPage() {
   });
 
   const countryId = selectedCountry === 'ALL' ? undefined : selectedCountry;
-  const agreements = useMemo(() => getAgreements(countryId), [countryId, _version]);
+  const agreements = useStoreData(() => getAgreements(countryId), [countryId]);
 
   const commodities = useMemo(() => {
     const set = new Set(agreements.map(a => a.commodity));
@@ -165,15 +165,18 @@ export function AgreementsPage() {
   return (
     <div>
       <PageHeader
-        title="Module 1 — Contract & Agreement Intelligence"
-        subtitle="Machine-readable contractual ontologies over mineral conventions, mining leases and royalty agreements — clause-tagged, jurisdictionally cross-referenced, and scored for Contract Integrity · ACCI §6.1"
+        title="Mining Agreements"
+        subtitle="Every contract the government has with mining companies, in one place."
+        badge="M1 · Contract & Agreement Intelligence"
       />
 
+      <ModuleIntro />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard label="Total Agreements" value={agreements.length} accent="blue" />
-        <MetricCard label="Active" value={active} accent="green" />
-        <MetricCard label="Under Review" value={underReview} accent="amber" />
-        <MetricCard label="Expiring < 90 Days" value={expiringWithin90} accent={expiringWithin90 > 0 ? 'amber' : 'default'} />
+        <MetricCard label="Total Agreements" value={agreements.length} accent="blue" hint="Every mining contract in the selected scope, regardless of status." />
+        <MetricCard label="Active" value={active} accent="green" hint="Contracts currently in force." />
+        <MetricCard label="Under Review" value={underReview} accent="amber" hint="Contracts being re-examined — for renewal, renegotiation, or a compliance question." />
+        <MetricCard label="Expiring < 90 Days" value={expiringWithin90} accent={expiringWithin90 > 0 ? 'amber' : 'default'} hint="Contracts whose term ends within the next 90 days — plan renewals or renegotiation now." />
       </div>
 
       <div className="bg-surface rounded-xl border border-line shadow-card overflow-hidden">
