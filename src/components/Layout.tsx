@@ -7,6 +7,9 @@ import { GlobalSearch } from '@/components/shared/GlobalSearch';
 import { AIAssistant } from '@/components/shared/AIAssistant';
 import { AIContextMenu } from '@/components/shared/AIContextMenu';
 import { AIBriefingPopover } from '@/components/shared/AIBriefingPopover';
+import { GuidedTour } from '@/components/shared/GuidedTour';
+import { HelpButton } from '@/components/shared/HelpButton';
+import { MODULES, moduleForPath } from '@/content/guide';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useRole } from '@/hooks/useRole';
@@ -16,22 +19,24 @@ import {
   Globe, Scale, Clock, LogOut, Settings, ChevronRight, Activity, ScrollText, Shield, Sun, Moon, TrendingUp, Users, Building2
 } from 'lucide-react';
 
-interface NavItemDef { to: string; label: string; module?: string; icon: LucideIcon; exact: boolean; }
+// Friendly labels, official names and module codes all come from the
+// content layer (guide.ts) so wording stays consistent across the app.
+interface NavItemDef { to: string; icon: LucideIcon; exact: boolean; }
 
 const NAV_ITEMS: NavItemDef[] = [
-  { to: '/',             module: 'Overview', label: 'Executive Dashboard',         icon: LayoutDashboard, exact: true  },
-  { to: '/agreements',   module: 'M1',       label: 'Contract & Agreement Intelligence', icon: FileText,        exact: false },
-  { to: '/negotiation',  module: 'M2',       label: 'Negotiation Intelligence',           icon: Scale,           exact: false },
-  { to: '/performance',  module: 'M3',       label: 'Performance & Compliance Monitoring', icon: BarChart3,      exact: false },
-  { to: '/risk',         module: 'M4',       label: 'Breach & Risk Detection',            icon: AlertTriangle,   exact: false },
-  { to: '/transparency', module: 'M5',       label: 'Transparency & Reporting',           icon: Globe,           exact: false },
-  { to: '/scenarios',    module: 'M6',       label: 'Fiscal Scenario Modelling',          icon: TrendingUp,      exact: false },
-  { to: '/ownership',    module: 'M7',       label: 'Beneficial Ownership',               icon: Users,           exact: false },
-  { to: '/local-content',module: 'M8',       label: 'Local Content Auditing',             icon: Building2,       exact: false },
+  { to: '/',             icon: LayoutDashboard, exact: true  },
+  { to: '/agreements',   icon: FileText,        exact: false },
+  { to: '/negotiation',  icon: Scale,           exact: false },
+  { to: '/performance',  icon: BarChart3,       exact: false },
+  { to: '/risk',         icon: AlertTriangle,   exact: false },
+  { to: '/transparency', icon: Globe,           exact: false },
+  { to: '/scenarios',    icon: TrendingUp,      exact: false },
+  { to: '/ownership',    icon: Users,           exact: false },
+  { to: '/local-content',icon: Building2,       exact: false },
 ];
 
-const ADMIN_NAV: NavItemDef = { to: '/admin', label: 'Administration',     icon: Settings,   exact: false };
-const AUDIT_NAV: NavItemDef = { to: '/audit', label: 'Audit & Activity',   icon: ScrollText, exact: false };
+const ADMIN_NAV: NavItemDef = { to: '/admin', icon: Settings,   exact: false };
+const AUDIT_NAV: NavItemDef = { to: '/audit', icon: ScrollText, exact: false };
 
 const SIDEBAR_MIN = 240;
 const SIDEBAR_MAX = 460;       // hard ceiling / fallback before content is measured
@@ -45,27 +50,18 @@ const COUNTRY_LABELS: Record<string, string> = {
   CIV: "Republic of Côte d'Ivoire",
 };
 
-const BREADCRUMB_LABELS: Record<string, string> = {
-  '/':             'Executive Dashboard',
-  '/agreements':   'Module 1 · Contract & Agreement Intelligence',
-  '/negotiation':  'Module 2 · Negotiation Intelligence',
-  '/performance':  'Module 3 · Performance & Compliance Monitoring',
-  '/risk':         'Module 4 · Breach & Risk Detection',
-  '/transparency': 'Module 5 · Transparency & Reporting',
-  '/scenarios':    'Module 6 · Fiscal Scenario Modelling',
-  '/ownership':    'Module 7 · Beneficial Ownership',
-  '/local-content':'Module 8 · Local Content Auditing',
-  '/admin':        'System Administration',
-  '/audit':        'Audit Log & Activity Monitor',
-};
-
 function NavItem({ item }: { item: NavItemDef }) {
+  const guide = MODULES[item.to];
+  const plainName = guide?.plainName ?? item.to;
+  const official = guide?.official;
+  const code = guide?.moduleCode;
   return (
     <NavLink
       to={item.to}
       end={item.exact}
+      title={guide?.tagline}
       className={({ isActive }) =>
-        'group flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-medium transition-all duration-200 border-l-[3px] ' +
+        'group flex items-center justify-between gap-3 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-all duration-200 border-l-[3px] ' +
         (isActive
           ? 'bg-white/[0.09] text-white border-gold-500'
           : 'text-white/65 border-transparent hover:bg-white/[0.06] hover:text-white')
@@ -75,9 +71,16 @@ function NavItem({ item }: { item: NavItemDef }) {
         <>
           <span className="flex items-center gap-3 min-w-0">
             <item.icon size={15} className={'shrink-0 transition-all duration-200 ' + (isActive ? 'opacity-100 text-gold-400' : 'opacity-70 group-hover:opacity-100')} />
-            <span className="min-w-0 truncate">{item.label}</span>
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className="min-w-0 truncate">{plainName}</span>
+              {official && (
+                <span className={'min-w-0 truncate text-[10px] font-normal ' + (isActive ? 'text-white/45' : 'text-white/35')}>
+                  {official}
+                </span>
+              )}
+            </span>
           </span>
-          {item.module ? (
+          {code ? (
             <span
               className={
                 'shrink-0 text-[9px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 rounded-full border transition-colors ' +
@@ -87,7 +90,7 @@ function NavItem({ item }: { item: NavItemDef }) {
               }
               aria-hidden
             >
-              {item.module}
+              {code}
             </span>
           ) : (
             <ChevronRight size={11} className={isActive ? 'opacity-60' : 'opacity-25 group-hover:opacity-50'} />
@@ -191,12 +194,8 @@ export function Layout() {
     return `${day} ${month} ${year}  ${time} ${tzName}`;
   };
 
-  const getBreadcrumb = () => {
-    const path = location.pathname;
-    if (path === '/') return BREADCRUMB_LABELS['/'];
-    const base = '/' + path.split('/')[1];
-    return BREADCRUMB_LABELS[base] ?? 'Platform';
-  };
+  const crumb = moduleForPath(location.pathname);
+  const getBreadcrumb = () => crumb?.plainName ?? 'Platform';
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -325,6 +324,8 @@ export function Layout() {
                 <AIAssistant />
                 <span className="w-px h-6 bg-line-strong shrink-0" />
                 <NotificationPanel />
+                <span className="w-px h-6 bg-line-strong shrink-0" />
+                <HelpButton />
               </div>
 
               <div className="flex items-center gap-2 lg:gap-3 pl-2 lg:pl-4 border-l border-line-strong shrink-0">
@@ -366,6 +367,11 @@ export function Layout() {
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-4 shrink-0">Section</span>
           <ChevronRight size={10} className="text-line-strong shrink-0" />
           <span className="text-[12px] font-semibold text-foreground tracking-wide truncate min-w-0">{getBreadcrumb()}</span>
+          {crumb?.official && (
+            <span className="hidden lg:inline text-[11px] font-medium text-ink-4 truncate min-w-0">
+              {crumb.moduleCode ? `${crumb.moduleCode} · ` : ''}{crumb.official}
+            </span>
+          )}
           <span className="mx-2 text-[12px] text-line-strong opacity-50 shrink-0">|</span>
           <span className="text-[11px] font-medium text-primary shrink-0 whitespace-nowrap">{COUNTRY_LABELS[selectedCountry]}</span>
           <span className="ml-auto flex items-center gap-2">
@@ -391,6 +397,9 @@ export function Layout() {
       {/* Global AI surface — right-click anywhere to invoke. */}
       <AIContextMenu />
       <AIBriefingPopover />
+
+      {/* First-run orientation (also re-openable from the header Help button). */}
+      <GuidedTour />
     </div>
   );
 }

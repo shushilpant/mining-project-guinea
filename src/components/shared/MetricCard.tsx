@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { InfoTip } from '@/components/shared/InfoTip';
 
 interface MetricCardProps {
   label: string;
@@ -7,6 +8,8 @@ interface MetricCardProps {
   icon?: ReactNode;
   accent?: 'default' | 'green' | 'amber' | 'red' | 'blue';
   onClick?: () => void;
+  /** Plain-language explanation of what this metric means. */
+  hint?: string;
 }
 
 const ACCENT: Record<string, { bar: string; iconBg: string; iconColor: string }> = {
@@ -17,7 +20,7 @@ const ACCENT: Record<string, { bar: string; iconBg: string; iconColor: string }>
   blue:    { bar: '#1D6FB8',           iconBg: 'rgba(29, 111, 184, 0.1)',      iconColor: '#1D6FB8' },
 };
 
-export function MetricCard({ label, value, sub, icon, accent = 'default', onClick }: MetricCardProps) {
+export function MetricCard({ label, value, sub, icon, accent = 'default', onClick, hint }: MetricCardProps) {
   const a = ACCENT[accent];
   const interactive = !!onClick;
 
@@ -36,7 +39,18 @@ export function MetricCard({ label, value, sub, icon, accent = 'default', onClic
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] mb-2 truncate opacity-70" style={{ color: a.iconColor }}>{label}</p>
+            <div className="flex items-center gap-1 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] truncate opacity-70" style={{ color: a.iconColor }}>{label}</p>
+              {hint && (
+                <span
+                  className="shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  <InfoTip title={label} body={hint} label={`What "${label}" means`} />
+                </span>
+              )}
+            </div>
             <p className="text-[26px] font-bold tabular-nums leading-none tracking-tight" style={{ color: a.iconColor }}>
               {value}
             </p>

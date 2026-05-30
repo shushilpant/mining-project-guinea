@@ -14,7 +14,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Sparkles, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAISettingsStore, isProviderReady } from '@/store/aiSettingsStore';
 import { useCountry } from '@/context/CountryContext';
-import { useDataStore } from '@/store/dataStore';
+import { useStoreData } from '@/store/dataStore';
 import { completeChat } from '@/services/aiService';
 import { aiCacheGet, aiCacheSet, fingerprint } from '@/lib/aiCache';
 import { buildContext } from '@/lib/aiContext';
@@ -35,14 +35,13 @@ export function MorningBriefStrip() {
   const ai = useAISettingsStore();
   const ready = ai.enabled && isProviderReady(ai);
   const { selectedCountry } = useCountry();
-  const dataVersion = useDataStore(s => s.version);
 
   // Bucket the cache by the calendar date so the brief naturally rolls over
   // each morning even if the TTL hasn't lapsed.
   const day = new Date().toISOString().slice(0, 10);
-  const pack = useMemo(
+  const pack = useStoreData(
     () => buildContext({ countryId: selectedCountry, maxOperators: 8, maxAgreements: 8, maxRiskFlags: 10, maxCommitments: 12, maxInfra: 6 }),
-    [selectedCountry, dataVersion],
+    [selectedCountry],
   );
   const cacheKey = useMemo(
     () => fingerprint(ai.model, selectedCountry, day, pack.length),
