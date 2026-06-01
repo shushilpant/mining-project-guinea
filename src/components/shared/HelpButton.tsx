@@ -10,8 +10,26 @@ import { HelpCircle, Compass, BookOpen } from 'lucide-react';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { moduleForPath } from '@/content/guide';
 
+// Bring the current page's intro panel into view with a brief highlight,
+// so "Show this page's guide" always gives visible feedback — even when
+// the panel was already on screen. The panel may have only just been
+// restored from its collapsed state, so wait for React to commit first.
+function revealPageGuide() {
+  const highlight = () => {
+    const el = document.getElementById('page-guide');
+    if (!el) return false;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const ring = ['ring-2', 'ring-brand-600', 'ring-offset-2', 'ring-offset-background'];
+    el.classList.add(...ring);
+    window.setTimeout(() => el.classList.remove(...ring), 1600);
+    return true;
+  };
+  requestAnimationFrame(() => { if (!highlight()) requestAnimationFrame(highlight); });
+}
+
 export function HelpButton() {
   const [open, setOpen] = useState(false);
+  const [hasGuide, setHasGuide] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const guide = moduleForPath(location.pathname);
@@ -36,7 +54,12 @@ export function HelpButton() {
   return (
     <div ref={wrapRef} className="relative shrink-0">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen((v) => {
+          // Detail routes resolve a parent-module guide but render no intro
+          // panel, so only offer "show guide" when one is actually present.
+          if (!v) setHasGuide(!!document.getElementById('page-guide'));
+          return !v;
+        })}
         aria-label="Help and guides"
         aria-expanded={open}
         className="flex h-10 w-10 items-center justify-center rounded-xl border border-line-soft bg-surface-2 text-ink-3 transition-all hover:bg-foreground/10 hover:text-foreground"
@@ -62,8 +85,12 @@ export function HelpButton() {
           </button>
           <button
             role="menuitem"
-            disabled={!guide}
-            onClick={() => { if (guide) restoreIntro(guide.route); setOpen(false); }}
+            disabled={!guide || !hasGuide}
+            onClick={() => {
+              if (guide) restoreIntro(guide.route);
+              setOpen(false);
+              revealPageGuide();
+            }}
             className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-ink-2 transition-colors hover:bg-foreground/5 disabled:opacity-40"
           >
             <BookOpen size={15} className="text-brand-600" aria-hidden />

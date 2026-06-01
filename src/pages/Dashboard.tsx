@@ -5,17 +5,19 @@ import {
 } from 'recharts';
 import type { LucideIcon } from 'lucide-react';
 import {
-  FileText, Users, AlertTriangle, TrendingUp, Shield,
+  FileText, Users, AlertTriangle, TrendingUp, TrendingDown, Shield,
   Calendar, Activity, ChevronRight, Clock, ArrowUpRight,
-  AlertOctagon, AlertCircle, ShieldAlert, FileBarChart2,
+  AlertOctagon, AlertCircle, ShieldAlert, FileBarChart2, Siren, Check,
 } from 'lucide-react';
 import { useCountry } from '@/context/CountryContext';
 import { useStoreData } from '@/store/dataStore';
 import {
   getSystemMetrics, getRiskFlags, getComplianceTrend,
   getAllCountrySummaries, getOperatorById, getAgreementById,
-  getCommitments,
+  getCommitments, getSystemAlerts, getCommodityMarketData, getAgreements, formatCommodity,
 } from '@/services/dataService';
+import { useAlertStore } from '@/store/alertStore';
+import type { AlertPriority } from '@/data/types';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CountryMap } from '@/components/shared/CountryMap';
@@ -168,6 +170,106 @@ function PanelHeader({
   );
 }
 
+const ALERT_PRIORITY_COLOR: Record<AlertPriority, string> = {
+  critical: '#DC2626', high: '#EA580C', medium: '#D97706', low: '#6B7280',
+};
+
+/* ── Active Alerts summary — top unacknowledged automated alerts ── */
+function ActiveAlertsPanel({ className = '' }: { className?: string }) {
+  const navigate = useNavigate();
+  const acknowledged = useAlertStore((s) => s.acknowledged);
+  const dismissed = useAlertStore((s) => s.dismissed);
+  const acknowledge = useAlertStore((s) => s.acknowledge);
+
+  const open = getSystemAlerts().filter((a) => !dismissed[a.id] && !acknowledged[a.id]);
+  const top = open.slice(0, 5);
+
+  return (
+    <Panel className={className}>
+      <PanelHeader
+        title="Active Alerts"
+        subtitle={`${open.length} unacknowledged · top ${top.length} shown`}
+        accent="#DC2626"
+        howToRead="Rule-driven alerts that still need a response, most serious first. Tick to acknowledge, or click an alert to open the detail behind it."
+        actions={<Siren size={16} className="text-ink-4" />}
+      />
+      <div className="divide-y divide-line-soft">
+        {top.length === 0 ? (
+          <div role="status" className="px-6 py-10 text-center text-[13px] text-ink-4 font-medium">All alerts acknowledged</div>
+        ) : (
+          top.map((a) => {
+            const color = ALERT_PRIORITY_COLOR[a.priority];
+            return (
+              <div key={a.id} className="px-6 py-3.5 flex items-start gap-3 hover:bg-foreground/[0.02] transition-colors" style={{ borderLeft: `3px solid ${color}` }}>
+                <button type="button" onClick={() => navigate(a.actionUrl)} className="min-w-0 flex-1 text-left">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ color, background: `${color}1A` }}>
+                      {a.category} · {a.priority}
+                    </span>
+                  </div>
+                  <div className="text-[13px] font-semibold text-foreground leading-snug">{a.title}</div>
+                  <div className="text-[11px] text-ink-4 leading-snug mt-0.5">{a.description}</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => acknowledge(a.id)}
+                  aria-label={`Acknowledge ${a.title}`}
+                  title="Acknowledge"
+                  className="shrink-0 mt-0.5 flex items-center justify-center w-7 h-7 rounded-lg text-ink-4 hover:text-status-success hover:bg-status-success/10 transition-colors"
+                >
+                  <Check size={14} />
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+/* ── Market snapshot — mini commodity price strip ── */
+function MarketSnapshot({ countryId, className = '' }: { countryId?: string; className?: string }) {
+  const navigate = useNavigate();
+  const market = getCommodityMarketData();
+  const inScope = new Set(getAgreements(countryId).filter((a) => a.status === 'active').map((a) => a.commodity));
+  const ordered = [...market].sort((a, b) => Number(inScope.has(b.commodity)) - Number(inScope.has(a.commodity)));
+
+  return (
+    <Panel className={className}>
+      <PanelHeader
+        title="Market Snapshot"
+        subtitle="Live commodity prices · 24h move"
+        accent="#C8991E"
+        howToRead="Today's indicative price for each commodity and how it moved in the last 24 hours. Green is up, red is down. Click to open Market Intelligence."
+        actions={<TrendingUp size={16} className="text-ink-4" />}
+      />
+      <ul className="divide-y divide-line-soft">
+        {ordered.map((d) => {
+          const up = d.change24h >= 0;
+          const focused = inScope.size === 0 || inScope.has(d.commodity);
+          return (
+            <li key={d.commodity}>
+              <button onClick={() => navigate('/market')} className={'w-full px-6 py-3 flex items-center justify-between gap-3 hover:bg-foreground/[0.02] transition-colors ' + (focused ? '' : 'opacity-55')}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: up ? '#10B981' : '#DC2626' }} aria-hidden />
+                  <span className="text-[13px] font-semibold text-foreground truncate">{formatCommodity(d.commodity)}</span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[13px] font-bold tabular-nums text-foreground">{d.currentPrice >= 100 ? d.currentPrice.toLocaleString() : d.currentPrice.toFixed(2)}</span>
+                  <span className="inline-flex items-center gap-0.5 text-[12px] font-bold tabular-nums w-16 justify-end" style={{ color: up ? '#10B981' : '#DC2626' }}>
+                    {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}{up ? '+' : ''}{d.change24h.toFixed(1)}%
+                  </span>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Panel>
+  );
+}
+
 export function Dashboard() {
   const { selectedCountry } = useCountry();
   const navigate = useNavigate();
@@ -275,8 +377,15 @@ export function Dashboard() {
             accent={metrics.breachedCommitments > 0 ? 'amber' : 'green'}
             onClick={() => navigate('/performance')}
             hint="Promises that have already been broken. The sub-figure shows how many more are slipping (at-risk)."
+            tooltipAlign="end"
           />
         </div>
+      </div>
+
+      {/* ── Active Alerts + Market Snapshot ──────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+        <ActiveAlertsPanel className="lg:col-span-3" />
+        <MarketSnapshot countryId={countryId} className="lg:col-span-2" />
       </div>
 
       {/* ── Map + Trend chart ────────────────────────────── */}

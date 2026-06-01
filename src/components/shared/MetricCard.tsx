@@ -10,6 +10,8 @@ interface MetricCardProps {
   onClick?: () => void;
   /** Plain-language explanation of what this metric means. */
   hint?: string;
+  /** Alignment of the info tooltip popover */
+  tooltipAlign?: 'start' | 'end' | 'center';
 }
 
 const ACCENT: Record<string, { bar: string; iconBg: string; iconColor: string }> = {
@@ -20,7 +22,7 @@ const ACCENT: Record<string, { bar: string; iconBg: string; iconColor: string }>
   blue:    { bar: '#1D6FB8',           iconBg: 'rgba(29, 111, 184, 0.1)',      iconColor: '#1D6FB8' },
 };
 
-export function MetricCard({ label, value, sub, icon, accent = 'default', onClick, hint }: MetricCardProps) {
+export function MetricCard({ label, value, sub, icon, accent = 'default', onClick, hint, tooltipAlign }: MetricCardProps) {
   const a = ACCENT[accent];
   const interactive = !!onClick;
 
@@ -47,7 +49,7 @@ export function MetricCard({ label, value, sub, icon, accent = 'default', onClic
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
-                  <InfoTip title={label} body={hint} label={`What "${label}" means`} />
+                  <InfoTip title={label} body={hint} label={`What "${label}" means`} align={tooltipAlign} />
                 </span>
               )}
             </div>

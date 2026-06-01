@@ -157,6 +157,76 @@ export const MODULES: Record<string, ModuleGuide> = {
     howToRead:
       'Each category shows promised versus actual. Bars at or above 100% are on target; below means the company is falling short on its local-benefit commitments.',
   },
+  '/esg': {
+    route: '/esg',
+    plainName: 'ESG Tracker',
+    official: 'Environmental, Social & Governance',
+    moduleCode: 'M9',
+    tagline: 'Track each company’s environmental, social, and governance record.',
+    whatYouCanDo: [
+      'See an overall ESG score for every operator and where it is slipping.',
+      'Watch water use, carbon, tailings safety, community grievances, and jobs.',
+      'Check which mines are nearing closure and whether their clean-up funds are paid up.',
+    ],
+    howToRead:
+      'Scores run 0–100, where higher is better. The radar compares companies on Environment, Social, and Governance. Red bars or low scores mean a company is falling short on that measure.',
+  },
+  '/market': {
+    route: '/market',
+    plainName: 'Market Intelligence',
+    official: 'Commodity Pricing & Revenue Impact',
+    moduleCode: 'M10',
+    tagline: 'See live mineral prices and what they mean for government revenue.',
+    whatYouCanDo: [
+      'Check the latest price for gold, bauxite, iron ore, manganese, lithium, and diamonds.',
+      'Drag a slider to model a price change and see the revenue impact instantly.',
+      'Spot when a price crosses a level that changes royalty rates.',
+    ],
+    howToRead:
+      'Green figures mean a price rose; red means it fell. In the simulator, a positive impact means more revenue for the government if prices move that way.',
+  },
+  '/documents': {
+    route: '/documents',
+    plainName: 'Document Vault',
+    official: 'Contract Document Management',
+    moduleCode: 'M11',
+    tagline: 'Every contract and report in one searchable, version-tracked library.',
+    whatYouCanDo: [
+      'Search across document titles, tags, and the clauses inside each contract.',
+      'Filter clauses by type — royalty, stabilization, dispute resolution, and more.',
+      'See the version history and key extracted clauses for any agreement.',
+    ],
+    howToRead:
+      'Each card is a document. The confidence figure on a clause shows how sure the automatic extraction is — higher means more reliable. Use the clause explorer to compare the same clause across contracts.',
+  },
+  '/public-data': {
+    route: '/public-data',
+    plainName: 'Open Data Portal',
+    official: 'Public Transparency & Data Export',
+    moduleCode: 'M12',
+    tagline: 'Publish open datasets and export clean data for public transparency.',
+    whatYouCanDo: [
+      'Browse the datasets available for public release, by country and theme.',
+      'Mark a dataset public or private and export it as CSV, JSON, or Excel.',
+      'Check each country’s EITI public-reporting readiness at a glance.',
+    ],
+    howToRead:
+      'Public datasets are open for anyone to download; private ones are still under review. The readiness gauge shows how complete a country’s EITI disclosures are — higher is closer to fully reporting.',
+  },
+  '/regulatory': {
+    route: '/regulatory',
+    plainName: 'Regulatory Tracker',
+    official: 'Legal & Regulatory Change Monitor',
+    moduleCode: 'M13',
+    tagline: 'Keep up with new mining laws, taxes, and rules across the region.',
+    whatYouCanDo: [
+      'Follow regulatory changes by status — enacted, proposed, under review, or withdrawn.',
+      'See which agreements each change affects and its estimated financial impact.',
+      'Spot where a new rule clashes with a contract’s stability (stabilization) clause.',
+    ],
+    howToRead:
+      'The timeline runs newest first. A “stabilization conflict” flag means a new rule may clash with a promise to keep a company’s terms fixed — a likely point of dispute to watch.',
+  },
   '/admin': {
     route: '/admin',
     plainName: 'Settings & Data',
@@ -213,6 +283,13 @@ const GLOSSARY_LIST: GlossaryEntry[] = [
   { term: 'Operator', definition: 'A company that runs a mining operation under an agreement with the government.' },
   { term: 'Agreement', definition: 'The contract between the government and a mining company setting out rights, royalties, and obligations.' },
   { term: 'Benchmark', definition: 'A reference value (here, a typical royalty rate for a mineral) used to judge whether a specific deal is fair.' },
+  { term: 'ESG', definition: 'Environmental, Social and Governance — a way of measuring how responsibly a company operates: its impact on nature, on people and communities, and how well it is run.' },
+  { term: 'Stabilization clause', definition: 'A contract term that freezes a company’s tax and royalty rates for a set period, so later law changes do not apply to it — a common source of dispute when rules change.' },
+  { term: 'Rehabilitation provision', definition: 'Money a company sets aside to clean up and restore a mine site once mining ends. “% funded” shows how much of the required amount has actually been paid in.' },
+  { term: 'Tailings', definition: 'The leftover waste material after the valuable mineral is removed, usually stored behind a dam. Tailings dams must be monitored closely because failures can be catastrophic.' },
+  { term: 'Galamsey', definition: 'Illegal, unlicensed small-scale gold mining in Ghana, a major cause of river pollution (high turbidity) and a recurring environmental and security concern.' },
+  { term: 'Turbidity (NTU)', definition: 'A measure of how cloudy water is, in NTU units. High readings indicate sediment pollution; Ghana’s treatment plants are designed for about 2,000 NTU.' },
+  { term: 'Open data', definition: 'Information published freely for anyone to download and reuse — here, government mining figures released for public transparency.' },
 ];
 
 export const GLOSSARY: Record<string, GlossaryEntry> = Object.fromEntries(

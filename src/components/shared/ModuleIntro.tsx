@@ -34,9 +34,10 @@ export function ModuleIntro() {
   if (dismissed) {
     return (
       <button
+        id="page-guide"
         type="button"
         onClick={() => restoreIntro(guide.route)}
-        className="mb-5 inline-flex items-center gap-2 rounded-lg border border-line-soft bg-surface-2 px-3 py-1.5 text-[12px] font-medium text-ink-3 transition-colors hover:border-brand-600/40 hover:text-brand-700"
+        className="mb-5 inline-flex items-center gap-2 rounded-lg border border-line-soft bg-surface-2 px-3 py-1.5 text-[12px] font-medium text-ink-3 transition hover:border-brand-600/40 hover:text-brand-700"
       >
         <HelpCircle size={14} aria-hidden />
         New here? Show what this page does
@@ -46,9 +47,10 @@ export function ModuleIntro() {
 
   return (
     <div
+      id="page-guide"
       ref={rootRef}
       data-ai-region={guide.plainName}
-      className="relative mb-5 overflow-hidden rounded-2xl border border-brand-600/20 bg-brand-600/[0.04] p-5"
+      className="relative mb-5 overflow-hidden rounded-2xl border border-brand-600/20 bg-brand-600/[0.04] p-5 transition-shadow duration-300"
     >
       <button
         type="button"

@@ -169,6 +169,11 @@
   .card-hover { 
     @apply transition-all duration-300 ease-out; 
   }
+  .card-hover:hover,
+  .card-hover:focus-within,
+  .card-hover:has([aria-expanded="true"]) {
+    @apply z-50;
+  }
   .card-hover:hover { 
     transform: translateY(-4px) scale(1.01);
     @apply shadow-md border-line;

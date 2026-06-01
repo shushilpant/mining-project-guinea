@@ -1,8 +1,9 @@
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useCountry } from '@/context/CountryContext';
 import { CountrySelector } from '@/components/shared/CountrySelector';
 import { NotificationPanel } from '@/components/shared/NotificationPanel';
+import { AlertCenter } from '@/components/shared/AlertCenter';
 import { GlobalSearch } from '@/components/shared/GlobalSearch';
 import { AIAssistant } from '@/components/shared/AIAssistant';
 import { AIContextMenu } from '@/components/shared/AIContextMenu';
@@ -10,13 +11,13 @@ import { AIBriefingPopover } from '@/components/shared/AIBriefingPopover';
 import { GuidedTour } from '@/components/shared/GuidedTour';
 import { HelpButton } from '@/components/shared/HelpButton';
 import { MODULES, moduleForPath } from '@/content/guide';
-import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useRole } from '@/hooks/useRole';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, FileText, BarChart3, AlertTriangle,
-  Globe, Scale, Clock, LogOut, Settings, ChevronRight, Activity, ScrollText, Shield, Sun, Moon, TrendingUp, Users, Building2
+  Globe, Scale, Clock, Settings, ChevronRight, Activity, ScrollText, Shield, Sun, Moon, TrendingUp, Users, Building2,
+  Leaf, LineChart, FolderSearch, Globe2, Gavel
 } from 'lucide-react';
 
 // Friendly labels, official names and module codes all come from the
@@ -33,6 +34,11 @@ const NAV_ITEMS: NavItemDef[] = [
   { to: '/scenarios',    icon: TrendingUp,      exact: false },
   { to: '/ownership',    icon: Users,           exact: false },
   { to: '/local-content',icon: Building2,       exact: false },
+  { to: '/esg',          icon: Leaf,            exact: false },
+  { to: '/market',       icon: LineChart,       exact: false },
+  { to: '/documents',    icon: FolderSearch,    exact: false },
+  { to: '/public-data',  icon: Globe2,          exact: false },
+  { to: '/regulatory',   icon: Gavel,           exact: false },
 ];
 
 const ADMIN_NAV: NavItemDef = { to: '/admin', icon: Settings,   exact: false };
@@ -103,9 +109,7 @@ function NavItem({ item }: { item: NavItemDef }) {
 
 export function Layout() {
   const { selectedCountry } = useCountry();
-  const logout   = useAuthStore((state) => state.logout);
   const { theme, toggleTheme } = useThemeStore();
-  const navigate = useNavigate();
   const location = useLocation();
   const { isAdmin } = useRole();
   const [now, setNow] = useState(new Date());
@@ -197,7 +201,6 @@ export function Layout() {
   const crumb = moduleForPath(location.pathname);
   const getBreadcrumb = () => crumb?.plainName ?? 'Platform';
 
-  const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -325,6 +328,8 @@ export function Layout() {
                 <span className="w-px h-6 bg-line-strong shrink-0" />
                 <NotificationPanel />
                 <span className="w-px h-6 bg-line-strong shrink-0" />
+                <AlertCenter />
+                <span className="w-px h-6 bg-line-strong shrink-0" />
                 <HelpButton />
               </div>
 
@@ -350,13 +355,6 @@ export function Layout() {
                 >
                   {isAdmin ? 'Admin' : 'Read-Only'}
                 </span>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-2 border border-line-soft text-ink-3 transition-all hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive group shrink-0"
-                  aria-label="Sign Out"
-                >
-                  <LogOut size={16} className="shrink-0 transition-transform group-hover:scale-110" />
-                </button>
               </div>
             </div>
           </header>

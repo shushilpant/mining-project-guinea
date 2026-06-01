@@ -25,6 +25,17 @@ import type {
   DocumentAccessLog,
   EITIReportSection,
   Commodity,
+  ESGMetric,
+  MineClosure,
+  CommodityMarketData,
+  RevenueImpactScenario,
+  ManagedDocument,
+  ExtractedClause,
+  SystemAlert,
+  PublicDataset,
+  PublicationLog,
+  RegulatoryChange,
+  RegulatoryImpact,
 } from '@/data/types';
 import { DEFAULT_THRESHOLDS } from '@/data/types';
 
@@ -399,6 +410,19 @@ export function formatCommodity(c: string): string {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
+// Compact operator labels for dense charts/tables where the full
+// registered name is too long. Falls back to the full name.
+const OPERATOR_SHORT: Record<string, string> = {
+  'OP-01': 'CBG', 'OP-02': 'SMB-Winning', 'OP-03': 'Rusal', 'OP-04': 'SimFer',
+  'OP-05': 'WCS', 'OP-06': 'GAC / Nimba', 'OP-07': 'Newmont', 'OP-08': 'Gold Fields',
+  'OP-09': 'AngloGold', 'OP-10': 'Atlantic Li', 'OP-11': 'GMC Nsuta', 'OP-12': 'Endeavour',
+  'OP-13': 'Perseus', 'OP-14': 'Barrick', 'OP-15': 'Allied Gold',
+};
+
+export function shortOperatorName(id: string): string {
+  return OPERATOR_SHORT[id] ?? getOperatorById(id)?.name ?? id;
+}
+
 export function daysUntilExpiry(expiryDate: string): number {
   const today = new Date('2024-05-24');
   const expiry = new Date(expiryDate);
@@ -477,6 +501,232 @@ export function getEITIReportReadiness(countryId: string) {
   const readinessPercent = totalSections > 0 ? Math.round(((complete + (partial * 0.5)) / totalSections) * 100) : 0;
   
   return { totalSections, complete, partial, missing, readinessPercent };
+}
+
+// ─── ESG Tracking (M9) ───────────────────────────────────────
+
+// Subcategories where a *lower* reading is better (water, carbon,
+// grievances, incidents). Everything else is higher-is-better
+// (funded provisions, local jobs, disclosure, safety compliance).
+export const ESG_LOWER_IS_BETTER = new Set<string>([
+  'water_usage', 'water_turbidity', 'carbon_emissions', 'energy_intensity',
+  'community_grievance', 'safety_incidents',
+]);
+
+/** Direction-aware 0–100 attainment score for a single ESG metric. */
+export function esgMetricScore(metric: ESGMetric): number {
+  const { targetValue, actualValue, subcategory } = metric;
+  if (ESG_LOWER_IS_BETTER.has(subcategory)) {
+    if (actualValue <= 0) return 100;
+    // target 0 with a positive reading → scale off a small epsilon so
+    // "should be zero" metrics (grievances, fatalities) still degrade.
+    const denom = targetValue > 0 ? targetValue : 1;
+    return Math.max(0, Math.min(100, Math.round((denom / actualValue) * 100)));
+  }
+  if (targetValue <= 0) return actualValue >= 0 ? 100 : 0;
+  return Math.max(0, Math.min(100, Math.round((actualValue / targetValue) * 100)));
+}
+
+export function getESGMetrics(operatorId?: string, countryId?: string): ESGMetric[] {
+  let metrics = DB.esgMetrics;
+  if (operatorId) metrics = metrics.filter(m => m.operatorId === operatorId);
+  if (countryId && countryId !== 'ALL') {
+    const opIds = new Set(getOperators(countryId).map(o => o.id));
+    metrics = metrics.filter(m => opIds.has(m.operatorId));
+  }
+  return metrics;
+}
+
+export function getESGSummary(countryId?: string): { environmental: number; social: number; governance: number } {
+  const metrics = getESGMetrics(undefined, countryId);
+  const avg = (cat: ESGMetric['category']) => {
+    const rows = metrics.filter(m => m.category === cat);
+    if (rows.length === 0) return 0;
+    return Math.round(rows.reduce((s, m) => s + esgMetricScore(m), 0) / rows.length);
+  };
+  return { environmental: avg('environmental'), social: avg('social'), governance: avg('governance') };
+}
+
+export function getMineClosures(countryId?: string): MineClosure[] {
+  if (!countryId || countryId === 'ALL') return DB.mineClosures;
+  const agreementIds = new Set(getAgreements(countryId).map(a => a.id));
+  return DB.mineClosures.filter(m => agreementIds.has(m.agreementId));
+}
+
+// ─── Market Intelligence (M10) ───────────────────────────────
+
+export function getCommodityMarketData(): CommodityMarketData[] {
+  return DB.commodityMarketData;
+}
+
+export function getCommodityMarketDataByCommodity(commodity: Commodity): CommodityMarketData | undefined {
+  return DB.commodityMarketData.find(d => d.commodity === commodity);
+}
+
+/**
+ * Estimate the government-revenue sensitivity of a commodity to a price move.
+ * Baseline royalty take ≈ Σ(contractValue × royaltyRate%) over active
+ * agreements of that commodity; ad-valorem revenue scales ~linearly with price.
+ */
+export function computeRevenueImpact(commodity: Commodity, priceChangePct: number, countryId?: string): RevenueImpactScenario {
+  const agreements = getAgreements(countryId).filter(a => a.commodity === commodity && a.status === 'active');
+  const currentRevenue = agreements.reduce(
+    (sum, a) => sum + a.contractValue * 1_000_000 * (a.royaltyRate / 100),
+    0,
+  );
+  const projectedRevenue = currentRevenue * (1 + priceChangePct / 100);
+  return {
+    commodity,
+    priceChangePercent: priceChangePct,
+    currentRevenue,
+    projectedRevenue,
+    impactUSD: projectedRevenue - currentRevenue,
+  };
+}
+
+// ─── Document Management (M11) ───────────────────────────────
+
+export function getManagedDocuments(filters?: { countryId?: string; type?: string; operatorId?: string }): ManagedDocument[] {
+  let docs = DB.managedDocuments;
+  if (filters?.countryId && filters.countryId !== 'ALL') docs = docs.filter(d => d.countryId === filters.countryId);
+  if (filters?.type) docs = docs.filter(d => d.documentType === filters.type);
+  if (filters?.operatorId) docs = docs.filter(d => d.operatorId === filters.operatorId);
+  return docs;
+}
+
+export function searchDocuments(query: string): ManagedDocument[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return DB.managedDocuments;
+  return DB.managedDocuments.filter(d =>
+    d.title.toLowerCase().includes(q) ||
+    d.tags.some(t => t.toLowerCase().includes(q)) ||
+    d.documentType.toLowerCase().includes(q) ||
+    d.extractedClauses.some(c =>
+      c.clauseText.toLowerCase().includes(q) || c.clauseType.toLowerCase().includes(q),
+    ),
+  );
+}
+
+export function getExtractedClauses(documentId?: string, clauseType?: string): ExtractedClause[] {
+  const clauses = DB.managedDocuments.flatMap(d => d.extractedClauses);
+  return clauses.filter(c =>
+    (!documentId || c.documentId === documentId) &&
+    (!clauseType || c.clauseType === clauseType),
+  );
+}
+
+// ─── Automated Alerts ────────────────────────────────────────
+
+export function getSystemAlerts(filters?: { category?: string; priority?: string; acknowledged?: boolean }): SystemAlert[] {
+  let alerts = DB.systemAlerts;
+  if (filters?.category) alerts = alerts.filter(a => a.category === filters.category);
+  if (filters?.priority) alerts = alerts.filter(a => a.priority === filters.priority);
+  if (filters?.acknowledged !== undefined) alerts = alerts.filter(a => a.acknowledged === filters.acknowledged);
+  const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+  return [...alerts].sort((a, b) => order[a.priority] - order[b.priority]);
+}
+
+export function getAlertCount(): { total: number; critical: number; unacknowledged: number } {
+  const alerts = DB.systemAlerts;
+  return {
+    total: alerts.length,
+    critical: alerts.filter(a => a.priority === 'critical').length,
+    unacknowledged: alerts.filter(a => !a.acknowledged).length,
+  };
+}
+
+// ─── Public Portal / Open Data (M12) ─────────────────────────
+
+export function getPublicDatasets(countryId?: string): PublicDataset[] {
+  if (!countryId || countryId === 'ALL') return DB.publicDatasets;
+  return DB.publicDatasets.filter(d => d.countryId === countryId);
+}
+
+export function getPublicationLogs(datasetId?: string): PublicationLog[] {
+  const logs = datasetId ? DB.publicationLogs.filter(l => l.datasetId === datasetId) : DB.publicationLogs;
+  return [...logs].sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+}
+
+/**
+ * Build a representative open-data export from live records for a dataset.
+ * Returns rows in a format-neutral shape; the caller encodes to CSV/JSON/Excel.
+ */
+export function generatePublicExport(datasetId: string): object[] {
+  const ds = DB.publicDatasets.find(d => d.id === datasetId);
+  if (!ds) return [];
+  const country = ds.countryId;
+
+  switch (ds.category) {
+    case 'revenue':
+      return getAgreements(country)
+        .filter(a => a.status === 'active')
+        .map(a => ({
+          operator: getOperatorById(a.operatorId)?.name ?? a.operatorId,
+          commodity: a.commodity,
+          royalty_rate_pct: a.royaltyRate,
+          estimated_royalty_usd: Math.round(a.contractValue * 1_000_000 * (a.royaltyRate / 100)),
+          period: '2026-Q1',
+        }));
+    case 'licenses':
+      return getAgreements(country).map(a => ({
+        licence_id: a.id,
+        operator: getOperatorById(a.operatorId)?.name ?? a.operatorId,
+        commodity: a.commodity,
+        licence_type: a.licenseType,
+        status: a.status,
+        expiry: a.expiryDate,
+      }));
+    case 'production':
+      return getAgreements(country)
+        .filter(a => a.status === 'active')
+        .map(a => ({
+          mine: a.concesssionArea,
+          operator: getOperatorById(a.operatorId)?.name ?? a.operatorId,
+          commodity: a.commodity,
+          period: '2026-Q1',
+        }));
+    case 'esg':
+      return getESGMetrics(undefined, country).map(m => ({
+        operator: getOperatorById(m.operatorId)?.name ?? m.operatorId,
+        category: m.category,
+        metric: m.metricName,
+        target: m.targetValue,
+        actual: m.actualValue,
+        unit: m.unit,
+        period: m.reportingPeriod,
+      }));
+    case 'local_content':
+      return getLocalContentRecords(undefined, country).map(r => ({
+        operator: getOperatorById(r.operatorId)?.name ?? r.operatorId,
+        category: r.category,
+        promised: r.promised,
+        actual: r.actual,
+        unit: r.unit,
+        period: r.reportingPeriod,
+      }));
+    default:
+      return [];
+  }
+}
+
+// ─── Regulatory Tracker (M13) ────────────────────────────────
+
+export function getRegulatoryChanges(countryId?: string): RegulatoryChange[] {
+  const changes = (!countryId || countryId === 'ALL')
+    ? DB.regulatoryChanges
+    : DB.regulatoryChanges.filter(r => r.countryId === countryId);
+  return [...changes].sort((a, b) => new Date(b.announcedDate).getTime() - new Date(a.announcedDate).getTime());
+}
+
+export function getRegulatoryImpacts(regulationId?: string, agreementId?: string): RegulatoryImpact[] {
+  return DB.regulatoryImpacts.filter(i =>
+    (!regulationId || i.regulationId === regulationId) &&
+    (!agreementId || i.agreementId === agreementId),
+  );
+}
+
+export function getStabilizationConflicts(countryId?: string): RegulatoryChange[] {
+  return getRegulatoryChanges(countryId).filter(r => r.stabilizationConflict);
 }
 
 export { DEFAULT_THRESHOLDS };

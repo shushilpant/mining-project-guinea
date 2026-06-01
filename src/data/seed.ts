@@ -31,6 +31,15 @@ import type {
   LocalContentRecord,
   DocumentAccessLog,
   EITIReportSection,
+  ESGMetric,
+  MineClosure,
+  CommodityMarketData,
+  ManagedDocument,
+  SystemAlert,
+  PublicDataset,
+  PublicationLog,
+  RegulatoryChange,
+  RegulatoryImpact,
 } from './types';
 
 // ─── Countries ───────────────────────────────────────────────
@@ -1025,6 +1034,381 @@ export const EITI_REPORT_SECTIONS: EITIReportSection[] = [
   { countryId: 'CIV', sectionNumber: '4.1', title: 'Revenue Collection', status: 'partial', dataSource: 'DGI', lastUpdated: '2024-04-19' },
 ];
 
+// ─── ESG Metrics (M9) ─────────────────────────────────────────
+// Environmental / Social / Governance readings tied to the same
+// verified operator stories that drive the risk register. Values
+// are in natural units; the ESG page scores them direction-aware
+// (lower-is-better for water/carbon/grievances; higher-is-better
+// for funded provisions, local jobs, disclosure).
+
+export const ESG_METRICS: ESGMetric[] = [
+  // OP-01 CBG Sangarédi (Guinea, bauxite) — IFC CAO community grievances
+  { id: 'ESG-001', operatorId: 'OP-01', agreementId: 'AGR-001', category: 'environmental', subcategory: 'water_usage',          metricName: 'Process Water Intensity',              targetValue: 0.8, actualValue: 1.1,   unit: 'm³/t',     reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-02-10' },
+  { id: 'ESG-002', operatorId: 'OP-01', agreementId: 'AGR-001', category: 'environmental', subcategory: 'carbon_emissions',     metricName: 'Scope 1+2 Emissions Intensity',        targetValue: 12,  actualValue: 15,    unit: 'kgCO₂/t',  reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-02-10' },
+  { id: 'ESG-003', operatorId: 'OP-01', agreementId: 'AGR-001', category: 'environmental', subcategory: 'tailings_dam',         metricName: 'Tailings/Residue Safety Compliance',   targetValue: 100, actualValue: 95,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-02-10' },
+  { id: 'ESG-004', operatorId: 'OP-01', agreementId: 'AGR-001', category: 'social',        subcategory: 'community_grievance',  metricName: 'Open Community Grievances (13 villages)', targetValue: 0, actualValue: 13,  unit: 'open',     reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-02-10' },
+  { id: 'ESG-005', operatorId: 'OP-01', agreementId: 'AGR-001', category: 'social',        subcategory: 'local_jobs',          metricName: 'Guinean Workforce Share',              targetValue: 70,  actualValue: 72,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-02-10' },
+  { id: 'ESG-006', operatorId: 'OP-01', agreementId: 'AGR-001', category: 'governance',    subcategory: 'transparency_disclosure', metricName: 'EITI Disclosure Completeness',     targetValue: 100, actualValue: 80,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-02-10' },
+
+  // OP-02 SMB-Winning (Guinea, bauxite)
+  { id: 'ESG-007', operatorId: 'OP-02', agreementId: 'AGR-002', category: 'environmental', subcategory: 'water_usage',          metricName: 'Process Water Intensity',              targetValue: 0.8, actualValue: 0.9,   unit: 'm³/t',     reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-28' },
+  { id: 'ESG-008', operatorId: 'OP-02', agreementId: 'AGR-002', category: 'environmental', subcategory: 'carbon_emissions',     metricName: 'Scope 1+2 Emissions Intensity',        targetValue: 12,  actualValue: 13,    unit: 'kgCO₂/t',  reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-28' },
+  { id: 'ESG-009', operatorId: 'OP-02', agreementId: 'AGR-002', category: 'social',        subcategory: 'local_jobs',          metricName: 'Guinean Workforce Share',              targetValue: 65,  actualValue: 88,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-01-28' },
+
+  // OP-03 Rusal Friguia (Guinea, bauxite/alumina) — rehab escrow shortfall, sanctions
+  { id: 'ESG-010', operatorId: 'OP-03', agreementId: 'AGR-003', category: 'environmental', subcategory: 'rehab_provision',      metricName: 'Rehabilitation Escrow Funded (Art. 142)', targetValue: 100, actualValue: 65, unit: '%',        reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-01-15' },
+  { id: 'ESG-011', operatorId: 'OP-03', agreementId: 'AGR-003', category: 'environmental', subcategory: 'tailings_dam',         metricName: 'Red-Mud Residue Safety Compliance',    targetValue: 100, actualValue: 78,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-01-15' },
+  { id: 'ESG-012', operatorId: 'OP-03', agreementId: 'AGR-003', category: 'governance',    subcategory: 'transparency_disclosure', metricName: 'Beneficial-Ownership / Sanctions Disclosure', targetValue: 100, actualValue: 60, unit: '%', reportingPeriod: '2025-Q4', trend: 'stable', lastUpdated: '2026-01-15' },
+
+  // OP-04 SimFer Simandou (Guinea, iron ore) — PS6 biodiversity
+  { id: 'ESG-013', operatorId: 'OP-04', agreementId: 'AGR-004', category: 'environmental', subcategory: 'carbon_emissions',     metricName: 'Rail-Haul Emissions Intensity',        targetValue: 8,   actualValue: 7,     unit: 'kgCO₂/t',  reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-03-01' },
+  { id: 'ESG-014', operatorId: 'OP-04', agreementId: 'AGR-004', category: 'environmental', subcategory: 'biodiversity',         metricName: 'PS6 Habitat No-Net-Loss Attainment',   targetValue: 100, actualValue: 90,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-03-01' },
+  { id: 'ESG-015', operatorId: 'OP-04', agreementId: 'AGR-004', category: 'social',        subcategory: 'local_jobs',          metricName: 'Guinean Workforce Share',              targetValue: 70,  actualValue: 74,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-03-01' },
+  { id: 'ESG-016', operatorId: 'OP-04', agreementId: 'AGR-004', category: 'governance',    subcategory: 'board_independence',  metricName: 'CTG Co-Development Governance Index',   targetValue: 100, actualValue: 70,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-03-01' },
+
+  // OP-07 Newmont Ahafo (Ghana, gold) — strong performer
+  { id: 'ESG-017', operatorId: 'OP-07', agreementId: 'AGR-007', category: 'environmental', subcategory: 'water_usage',          metricName: 'Process Water Intensity',              targetValue: 0.5, actualValue: 0.45,  unit: 'm³/oz',    reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-02-20' },
+  { id: 'ESG-018', operatorId: 'OP-07', agreementId: 'AGR-007', category: 'environmental', subcategory: 'carbon_emissions',     metricName: 'GHG Emissions Intensity',              targetValue: 0.8, actualValue: 0.75,  unit: 'tCO₂/oz',  reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-02-20' },
+  { id: 'ESG-019', operatorId: 'OP-07', agreementId: 'AGR-007', category: 'environmental', subcategory: 'tailings_dam',         metricName: 'Tailings Safety (ICMC Certified)',     targetValue: 100, actualValue: 100,   unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-02-20' },
+  { id: 'ESG-020', operatorId: 'OP-07', agreementId: 'AGR-007', category: 'social',        subcategory: 'community_fund',      metricName: 'Community Development Fund Delivery',   targetValue: 100, actualValue: 92,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-02-20' },
+  { id: 'ESG-021', operatorId: 'OP-07', agreementId: 'AGR-007', category: 'social',        subcategory: 'safety_incidents',    metricName: 'Lost-Time Injury Frequency',           targetValue: 0,   actualValue: 1,     unit: 'incidents', reportingPeriod: '2025-Q4', trend: 'stable',   lastUpdated: '2026-02-20' },
+  { id: 'ESG-022', operatorId: 'OP-07', agreementId: 'AGR-007', category: 'governance',    subcategory: 'transparency_disclosure', metricName: 'EITI Disclosure Completeness',     targetValue: 100, actualValue: 100,   unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-02-20' },
+
+  // OP-08 Gold Fields Tarkwa/Damang (Ghana, gold)
+  { id: 'ESG-023', operatorId: 'OP-08', agreementId: 'AGR-009', category: 'environmental', subcategory: 'water_turbidity',     metricName: 'Raw-Water Turbidity (Bonsa intake)',   targetValue: 2000, actualValue: 8000, unit: 'NTU',      reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-01-30' },
+  { id: 'ESG-024', operatorId: 'OP-08', agreementId: 'AGR-009', category: 'environmental', subcategory: 'rehab_provision',     metricName: 'Damang Closure Rehab Funded',          targetValue: 100, actualValue: 88,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-30' },
+  { id: 'ESG-025', operatorId: 'OP-08', agreementId: 'AGR-009', category: 'social',        subcategory: 'community_fund',      metricName: 'Community Development Fund Delivery',   targetValue: 100, actualValue: 102,   unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-01-30' },
+
+  // OP-09 AngloGold Obuasi/Iduapriem (Ghana, gold) — galamsey water, security
+  { id: 'ESG-026', operatorId: 'OP-09', agreementId: 'AGR-010', category: 'environmental', subcategory: 'water_turbidity',     metricName: 'Pra/Ankobra Basin Turbidity',          targetValue: 2000, actualValue: 32000, unit: 'NTU',     reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-02-05' },
+  { id: 'ESG-027', operatorId: 'OP-09', agreementId: 'AGR-010', category: 'environmental', subcategory: 'carbon_emissions',    metricName: 'GHG Emissions Intensity',              targetValue: 0.9, actualValue: 0.95,  unit: 'tCO₂/oz',  reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-02-05' },
+  { id: 'ESG-028', operatorId: 'OP-09', agreementId: 'AGR-010', category: 'social',        subcategory: 'community_grievance', metricName: 'Open Grievances (galamsey exclusion)', targetValue: 0,   actualValue: 6,     unit: 'open',     reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-02-05' },
+  { id: 'ESG-029', operatorId: 'OP-09', agreementId: 'AGR-010', category: 'social',        subcategory: 'safety_incidents',   metricName: 'Security-Related Fatalities (Jan 2025)', targetValue: 0, actualValue: 9,    unit: 'fatalities', reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-02-05' },
+  { id: 'ESG-030', operatorId: 'OP-09', agreementId: 'AGR-010', category: 'social',        subcategory: 'local_jobs',         metricName: 'Ghanaian Workforce Share',             targetValue: 75,  actualValue: 68,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-02-05' },
+  { id: 'ESG-031', operatorId: 'OP-09', agreementId: 'AGR-010', category: 'governance',    subcategory: 'audit_compliance',   metricName: 'Cyanide Code (ICMC) Certification',    targetValue: 100, actualValue: 85,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-02-05' },
+
+  // OP-10 Atlantic Lithium Ewoyaa (Ghana, lithium) — pre-construction
+  { id: 'ESG-032', operatorId: 'OP-10', agreementId: 'AGR-012', category: 'environmental', subcategory: 'rehab_provision',    metricName: 'ESIA & Rehabilitation Provision',      targetValue: 100, actualValue: 40,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-03-25' },
+  { id: 'ESG-033', operatorId: 'OP-10', agreementId: 'AGR-012', category: 'social',        subcategory: 'local_jobs',         metricName: 'Ghanaian Workforce Share',             targetValue: 75,  actualValue: 62,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-03-25' },
+  { id: 'ESG-034', operatorId: 'OP-10', agreementId: 'AGR-012', category: 'governance',    subcategory: 'transparency_disclosure', metricName: 'Lease-Ratification Transparency',  targetValue: 100, actualValue: 90,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-03-25' },
+
+  // OP-11 Ghana Manganese Nsuta (Ghana, manganese) — refinery milestone slip
+  { id: 'ESG-035', operatorId: 'OP-11', agreementId: 'AGR-013', category: 'environmental', subcategory: 'carbon_emissions',   metricName: 'Scope 1+2 Emissions Intensity',        targetValue: 10,  actualValue: 11,    unit: 'kgCO₂/t',  reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-20' },
+  { id: 'ESG-036', operatorId: 'OP-11', agreementId: 'AGR-013', category: 'governance',    subcategory: 'audit_compliance',   metricName: 'Refinery Milestone Governance',        targetValue: 100, actualValue: 50,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-01-20' },
+
+  // OP-12 Endeavour Ity/Lafigué (Côte d'Ivoire, gold) — strong performer, MSPI
+  { id: 'ESG-037', operatorId: 'OP-12', agreementId: 'AGR-014', category: 'environmental', subcategory: 'water_usage',        metricName: 'Process Water Intensity',              targetValue: 0.6, actualValue: 0.5,   unit: 'm³/oz',    reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-02-12' },
+  { id: 'ESG-038', operatorId: 'OP-12', agreementId: 'AGR-014', category: 'environmental', subcategory: 'carbon_emissions',   metricName: 'GHG Emissions Intensity (solar-hybrid)', targetValue: 0.8, actualValue: 0.6, unit: 'tCO₂/oz', reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-02-12' },
+  { id: 'ESG-039', operatorId: 'OP-12', agreementId: 'AGR-014', category: 'social',        subcategory: 'community_fund',     metricName: 'Art. 125 Community Fund Delivery',     targetValue: 100, actualValue: 100,   unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-02-12' },
+  { id: 'ESG-040', operatorId: 'OP-12', agreementId: 'AGR-014', category: 'social',        subcategory: 'local_jobs',         metricName: 'Ivorian Workforce Share',              targetValue: 70,  actualValue: 76,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-02-12' },
+  { id: 'ESG-041', operatorId: 'OP-12', agreementId: 'AGR-014', category: 'governance',    subcategory: 'transparency_disclosure', metricName: 'EITI / MSPI Disclosure',           targetValue: 100, actualValue: 95,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'improving', lastUpdated: '2026-02-12' },
+
+  // OP-13 Perseus Yaouré/Sissingué (Côte d'Ivoire, gold) — closure planning
+  { id: 'ESG-042', operatorId: 'OP-13', agreementId: 'AGR-017', category: 'environmental', subcategory: 'rehab_provision',    metricName: 'Sissingué Closure Fund Funded',        targetValue: 100, actualValue: 96,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-18' },
+  { id: 'ESG-043', operatorId: 'OP-13', agreementId: 'AGR-016', category: 'environmental', subcategory: 'water_usage',        metricName: 'Yaouré Process Water Intensity',       targetValue: 0.6, actualValue: 0.55,  unit: 'm³/oz',    reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-18' },
+  { id: 'ESG-044', operatorId: 'OP-13', agreementId: 'AGR-016', category: 'social',        subcategory: 'local_jobs',         metricName: 'Ivorian Workforce Share',              targetValue: 70,  actualValue: 71,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-18' },
+
+  // OP-14 Barrick Tongon (Côte d'Ivoire, gold) — declining, pending sale
+  { id: 'ESG-045', operatorId: 'OP-14', agreementId: 'AGR-018', category: 'environmental', subcategory: 'rehab_provision',    metricName: 'Tongon Closure Provision Funded',      targetValue: 100, actualValue: 82,    unit: '%',        reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-22' },
+  { id: 'ESG-046', operatorId: 'OP-14', agreementId: 'AGR-018', category: 'social',        subcategory: 'community_grievance', metricName: 'Boundiali Extension Grievances',       targetValue: 0,   actualValue: 4,     unit: 'open',     reportingPeriod: '2025-Q4', trend: 'stable',    lastUpdated: '2026-01-22' },
+  { id: 'ESG-047', operatorId: 'OP-14', agreementId: 'AGR-018', category: 'governance',    subcategory: 'board_independence', metricName: 'Change-of-Control Governance Readiness', targetValue: 100, actualValue: 65, unit: '%',       reportingPeriod: '2025-Q4', trend: 'declining', lastUpdated: '2026-01-22' },
+];
+
+// ─── Mine Closure & Rehabilitation (M9) ───────────────────────
+
+export const MINE_CLOSURES: MineClosure[] = [
+  { id: 'MC-1', agreementId: 'AGR-017', operatorId: 'OP-13', mineName: 'Sissingué (Perseus)',          estimatedClosureDate: '2027-06-30', rehabilitationProvisionUSD: 18_000_000, rehabilitationSpentUSD: 17_300_000, closurePlanStatus: 'approved', environmentalBondUSD: 15_000_000, lastAuditDate: '2025-09-15' },
+  { id: 'MC-2', agreementId: 'AGR-018', operatorId: 'OP-14', mineName: 'Tongon (Barrick)',             estimatedClosureDate: '2029-03-01', rehabilitationProvisionUSD: 42_000_000, rehabilitationSpentUSD: 34_400_000, closurePlanStatus: 'pending',  environmentalBondUSD: 30_000_000, lastAuditDate: '2025-06-30' },
+  { id: 'MC-3', agreementId: 'AGR-020', operatorId: 'OP-15', mineName: 'Bonikro (Allied Gold)',        estimatedClosureDate: '2028-06-01', rehabilitationProvisionUSD: 12_000_000, rehabilitationSpentUSD: 9_000_000,  closurePlanStatus: 'pending',  environmentalBondUSD: 8_000_000,  lastAuditDate: '2024-11-20' },
+  { id: 'MC-4', agreementId: 'AGR-009', operatorId: 'OP-08', mineName: 'Damang (Gold Fields)',         estimatedClosureDate: '2026-12-31', rehabilitationProvisionUSD: 55_000_000, rehabilitationSpentUSD: 48_400_000, closurePlanStatus: 'approved', environmentalBondUSD: 40_000_000, lastAuditDate: '2025-04-18' },
+  { id: 'MC-5', agreementId: 'AGR-003', operatorId: 'OP-03', mineName: 'Friguia Refinery (Rusal)',     estimatedClosureDate: '2031-06-01', rehabilitationProvisionUSD: 30_000_000, rehabilitationSpentUSD: 19_500_000, closurePlanStatus: 'overdue',  environmentalBondUSD: 22_000_000, lastAuditDate: '2024-06-01' },
+  { id: 'MC-6', agreementId: 'AGR-006', operatorId: 'OP-06', mineName: 'GAC/EGA Boffa (Nimba Mining)', estimatedClosureDate: '2026-12-31', rehabilitationProvisionUSD: 25_000_000, rehabilitationSpentUSD: 5_000_000,  closurePlanStatus: 'overdue',  environmentalBondUSD: 10_000_000, lastAuditDate: '2025-08-01' },
+];
+
+// ─── Commodity Market Data (M10) ──────────────────────────────
+// Indicative early-2026 price levels. Gold breaching USD 5,000/oz
+// trips the Ghana 12% sliding-scale royalty ceiling (>USD 4,500/oz).
+
+export const COMMODITY_MARKET_DATA: CommodityMarketData[] = [
+  { commodity: 'gold',      currentPrice: 5050,  priceUnit: 'USD/oz',          change24h: 0.8,  change7d: 2.4,  change30d: 6.1,  yearHigh: 5200, yearLow: 2580, lastUpdated: '2026-05-29' },
+  { commodity: 'bauxite',   currentPrice: 78,    priceUnit: 'USD/t (CIF)',     change24h: 0.2,  change7d: 1.1,  change30d: -1.5, yearHigh: 92,   yearLow: 64,   lastUpdated: '2026-05-29' },
+  { commodity: 'iron ore',  currentPrice: 103,   priceUnit: 'USD/t (CFR 62%)', change24h: -1.2, change7d: -3.4, change30d: 4.0,  yearHigh: 131,  yearLow: 89,   lastUpdated: '2026-05-29' },
+  { commodity: 'manganese', currentPrice: 4.6,   priceUnit: 'USD/dmtu',        change24h: 0.0,  change7d: -0.8, change30d: -2.2, yearHigh: 6.1,  yearLow: 4.1,  lastUpdated: '2026-05-29' },
+  { commodity: 'lithium',   currentPrice: 1480,  priceUnit: 'USD/t (SC6)',     change24h: -0.5, change7d: -3.0, change30d: -8.0, yearHigh: 3200, yearLow: 1350, lastUpdated: '2026-05-29' },
+  { commodity: 'diamonds',  currentPrice: 118,   priceUnit: 'index (2020=100)', change24h: -0.3, change7d: -1.0, change30d: -4.5, yearHigh: 145,  yearLow: 110,  lastUpdated: '2026-05-29' },
+];
+
+// ─── Managed Documents + Extracted Clauses (M11) ──────────────
+
+export const MANAGED_DOCUMENTS: ManagedDocument[] = [
+  {
+    id: 'DOC-001', title: 'Simandou B3/B4 Co-Development Agreement', documentType: 'agreement', agreementId: 'AGR-004', operatorId: 'OP-04', countryId: 'GIN',
+    uploadDate: '2022-01-15', lastModified: '2024-05-22', version: 'v3.2', fileSize: '8.4 MB', uploadedBy: 'Legal Counsel A. Touré', tags: ['simandou', 'iron ore', 'co-development', 'infrastructure'], hash: 'sha256:9f2a7c41',
+    extractedClauses: [
+      { id: 'CL-001', documentId: 'DOC-001', clauseType: 'royalty',           clauseText: '3% ad-valorem royalty on iron ore referenced to the SGX/Singapore Iron Ore Index CFR China benchmark, payable quarterly.', pageNumber: 14, confidence: 0.96 },
+      { id: 'CL-002', documentId: 'DOC-001', clauseType: 'stabilization',     clauseText: 'Fiscal terms stabilised for the duration of the Co-Development period save for generally applicable changes of law.', pageNumber: 22, confidence: 0.88 },
+      { id: 'CL-003', documentId: 'DOC-001', clauseType: 'environmental',     clauseText: 'IFC PS6 no-net-loss obligations for the chimpanzee and forest-elephant corridor along the 600 km rail alignment.', pageNumber: 41, confidence: 0.91 },
+    ],
+  },
+  {
+    id: 'DOC-002', title: 'CBG Convention de Base (1963) + 2002 Amendment', documentType: 'agreement', agreementId: 'AGR-001', operatorId: 'OP-01', countryId: 'GIN',
+    uploadDate: '2021-03-01', lastModified: '2023-09-10', version: 'v2.0', fileSize: '5.1 MB', uploadedBy: 'Archivist M. Camara', tags: ['bauxite', 'cbg', 'sangaredi', 'legacy'], hash: 'sha256:3b6e0d12',
+    extractedClauses: [
+      { id: 'CL-004', documentId: 'DOC-002', clauseType: 'royalty',           clauseText: 'Extraction tax of 0.075% on bauxite; Local Development Fund contribution of 0.5% of annual turnover.', pageNumber: 8, confidence: 0.94 },
+      { id: 'CL-005', documentId: 'DOC-002', clauseType: 'dispute_resolution', clauseText: 'Disputes referred to ICC arbitration seated in Geneva under the rules of the International Chamber of Commerce.', pageNumber: 33, confidence: 0.9 },
+    ],
+  },
+  {
+    id: 'DOC-003', title: 'Newmont Ahafo South Investment Agreement', documentType: 'agreement', agreementId: 'AGR-007', operatorId: 'OP-07', countryId: 'GHA',
+    uploadDate: '2006-02-01', lastModified: '2025-01-12', version: 'v4.1', fileSize: '6.9 MB', uploadedBy: 'Minerals Commission', tags: ['gold', 'newmont', 'ahafo', 'stability'], hash: 'sha256:7c1a44e9',
+    extractedClauses: [
+      { id: 'CL-006', documentId: 'DOC-003', clauseType: 'royalty',           clauseText: 'Sliding-scale royalty 5% base rising to 12% above USD 4,500/oz under the Minerals and Mining (Royalty) Regulations 2025.', pageNumber: 12, confidence: 0.95 },
+      { id: 'CL-007', documentId: 'DOC-003', clauseType: 'local_content',     clauseText: 'Minimum 80% Ghanaian nationals in the workforce within five years of commercial production.', pageNumber: 19, confidence: 0.93 },
+      { id: 'CL-008', documentId: 'DOC-003', clauseType: 'force_majeure',     clauseText: 'Neither party liable for failure to perform attributable to events beyond reasonable control, including civil unrest.', pageNumber: 47, confidence: 0.86 },
+    ],
+  },
+  {
+    id: 'DOC-004', title: 'Gold Fields Tarkwa Stability Agreement', documentType: 'agreement', agreementId: 'AGR-009', operatorId: 'OP-08', countryId: 'GHA',
+    uploadDate: '2008-11-05', lastModified: '2024-12-01', version: 'v2.3', fileSize: '4.2 MB', uploadedBy: 'Minerals Commission', tags: ['gold', 'gold fields', 'tarkwa', 'stability'], hash: 'sha256:c4d9af13',
+    extractedClauses: [
+      { id: 'CL-009', documentId: 'DOC-004', clauseType: 'stabilization',     clauseText: 'Fiscal stability guaranteed through 2028; sliding-scale royalty applies only to non-stabilised tonnage.', pageNumber: 9, confidence: 0.92 },
+      { id: 'CL-010', documentId: 'DOC-004', clauseType: 'termination',       clauseText: 'Companion Damang lease subject to separate renewal; non-renewal does not affect the Tarkwa lease term.', pageNumber: 28, confidence: 0.84 },
+    ],
+  },
+  {
+    id: 'DOC-005', title: 'AngloGold Obuasi Development Agreement', documentType: 'agreement', agreementId: 'AGR-010', operatorId: 'OP-09', countryId: 'GHA',
+    uploadDate: '2014-06-10', lastModified: '2025-02-03', version: 'v3.0', fileSize: '5.6 MB', uploadedBy: 'Legal Counsel', tags: ['gold', 'anglogold', 'obuasi'], hash: 'sha256:0a44e9c7',
+    extractedClauses: [
+      { id: 'CL-011', documentId: 'DOC-005', clauseType: 'environmental',     clauseText: 'Continuous cyanide management (ICMC) and river water-quality monitoring of the Pra and Oda basins.', pageNumber: 36, confidence: 0.9 },
+      { id: 'CL-012', documentId: 'DOC-005', clauseType: 'local_content',     clauseText: 'Minimum 75% Ghanaian nationals in the Obuasi underground workforce.', pageNumber: 18, confidence: 0.91 },
+    ],
+  },
+  {
+    id: 'DOC-006', title: 'Ewoyaa Lithium Mining Lease (Ratified Mar 2026)', documentType: 'agreement', agreementId: 'AGR-012', operatorId: 'OP-10', countryId: 'GHA',
+    uploadDate: '2026-03-20', lastModified: '2026-03-20', version: 'v1.0', fileSize: '3.8 MB', uploadedBy: 'Parliament Clerk', tags: ['lithium', 'atlantic lithium', 'ewoyaa', 'ratified'], hash: 'sha256:1b6e0d88',
+    extractedClauses: [
+      { id: 'CL-013', documentId: 'DOC-006', clauseType: 'royalty',           clauseText: 'Lithium sliding-scale royalty 5% below USD 1,500/t spodumene to 12% above USD 3,200/t.', pageNumber: 11, confidence: 0.94 },
+      { id: 'CL-014', documentId: 'DOC-006', clauseType: 'local_content',     clauseText: 'Government 13% free-carried interest; MIIF 6% contributing interest valued at USD 27.9 m.', pageNumber: 15, confidence: 0.89 },
+    ],
+  },
+  {
+    id: 'DOC-007', title: 'Endeavour Ity Convention Minière', documentType: 'agreement', agreementId: 'AGR-014', operatorId: 'OP-12', countryId: 'CIV',
+    uploadDate: '2014-05-10', lastModified: '2025-01-20', version: 'v2.2', fileSize: '4.9 MB', uploadedBy: 'SODEMI', tags: ['gold', 'endeavour', 'ity'], hash: 'sha256:5e2c9b3f',
+    extractedClauses: [
+      { id: 'CL-015', documentId: 'DOC-007', clauseType: 'royalty',           clauseText: '2025 Finance Act ad-valorem gold royalty up to 8% above USD 2,000/oz, retroactive to January 2025.', pageNumber: 13, confidence: 0.95 },
+      { id: 'CL-016', documentId: 'DOC-007', clauseType: 'local_content',     clauseText: 'Mandatory Community Development Fund contribution under Article 125 of the Mining Code.', pageNumber: 24, confidence: 0.9 },
+    ],
+  },
+  {
+    id: 'DOC-008', title: 'Barrick Tongon Convention Minière', documentType: 'agreement', agreementId: 'AGR-018', operatorId: 'OP-14', countryId: 'CIV',
+    uploadDate: '2009-03-12', lastModified: '2025-06-15', version: 'v2.0', fileSize: '4.4 MB', uploadedBy: 'SODEMI', tags: ['gold', 'barrick', 'tongon', 'change-of-control'], hash: 'sha256:8d3f1a2c',
+    extractedClauses: [
+      { id: 'CL-017', documentId: 'DOC-008', clauseType: 'termination',       clauseText: 'Any transfer of majority interest requires prior Ministerial approval (change-of-control clause).', pageNumber: 31, confidence: 0.92 },
+      { id: 'CL-018', documentId: 'DOC-008', clauseType: 'dispute_resolution', clauseText: 'Disputes settled by ICSID arbitration under the ICSID Convention.', pageNumber: 39, confidence: 0.88 },
+    ],
+  },
+  {
+    id: 'DOC-009', title: 'GAC/EGA – Guinea Definitive Settlement (6 May 2026)', documentType: 'amendment', agreementId: 'AGR-006', operatorId: 'OP-06', countryId: 'GIN',
+    uploadDate: '2026-05-06', lastModified: '2026-05-06', version: 'v1.0', fileSize: '2.1 MB', uploadedBy: 'Ministry of Justice', tags: ['settlement', 'gac', 'nimba mining', 'icsid'], hash: 'sha256:e91c5b27',
+    extractedClauses: [
+      { id: 'CL-019', documentId: 'DOC-009', clauseType: 'termination',       clauseText: 'Transfer of GAC assets to Nimba Mining Company in exchange for a lump-sum payment from the Republic of Guinea.', pageNumber: 4, confidence: 0.93 },
+      { id: 'CL-020', documentId: 'DOC-009', clauseType: 'dispute_resolution', clauseText: 'Full and final release of claims relating to the revoked Boffa bauxite Mining Convention.', pageNumber: 7, confidence: 0.9 },
+    ],
+  },
+  {
+    id: 'DOC-010', title: 'Simandou Annual ESG Report 2025', documentType: 'esg_report', agreementId: 'AGR-004', operatorId: 'OP-04', countryId: 'GIN',
+    uploadDate: '2026-03-01', lastModified: '2026-03-01', version: 'v1.0', fileSize: '12.3 MB', uploadedBy: 'SimFer ESG Team', tags: ['esg', 'biodiversity', 'simandou', 'ps6'], hash: 'sha256:a1b2c3d4',
+    extractedClauses: [
+      { id: 'CL-021', documentId: 'DOC-010', clauseType: 'environmental',     clauseText: 'Habitat no-net-loss attainment of 90% against the PS6 biodiversity offset baseline.', pageNumber: 17, confidence: 0.87 },
+    ],
+  },
+  {
+    id: 'DOC-011', title: 'Obuasi Galamsey Water-Quality Audit Q4 2025', documentType: 'audit_report', agreementId: 'AGR-010', operatorId: 'OP-09', countryId: 'GHA',
+    uploadDate: '2026-01-15', lastModified: '2026-01-15', version: 'v1.0', fileSize: '6.0 MB', uploadedBy: 'Chief Auditor K. Mensah', tags: ['audit', 'water', 'galamsey', 'turbidity'], hash: 'sha256:f5a6b7c8',
+    extractedClauses: [
+      { id: 'CL-022', documentId: 'DOC-011', clauseType: 'environmental',     clauseText: 'Pra/Ankobra turbidity recorded at 32,000 NTU against the 2,000 NTU GWCL treatment-design threshold.', pageNumber: 9, confidence: 0.92 },
+    ],
+  },
+  {
+    id: 'DOC-012', title: 'Sissingué Mine Closure & Rehabilitation Plan', documentType: 'closure_plan', agreementId: 'AGR-017', operatorId: 'OP-13', countryId: 'CIV',
+    uploadDate: '2025-09-15', lastModified: '2025-09-15', version: 'v2.0', fileSize: '4.7 MB', uploadedBy: 'Perseus Closure Team', tags: ['closure', 'rehabilitation', 'sissingue'], hash: 'sha256:b8c9d0e1',
+    extractedClauses: [
+      { id: 'CL-023', documentId: 'DOC-012', clauseType: 'environmental',     clauseText: 'Rehabilitation fund funded to 96% of the estimated USD 18 m closure provision.', pageNumber: 5, confidence: 0.89 },
+    ],
+  },
+  {
+    id: 'DOC-013', title: 'Ghana Royalty Regulations 2025 – Compliance Note', documentType: 'regulatory', operatorId: undefined, agreementId: undefined, countryId: 'GHA',
+    uploadDate: '2025-04-15', lastModified: '2025-04-15', version: 'v1.0', fileSize: '1.4 MB', uploadedBy: 'Policy Unit', tags: ['regulatory', 'royalty', 'sliding-scale'], hash: 'sha256:c0d1e2f3',
+    extractedClauses: [
+      { id: 'CL-024', documentId: 'DOC-013', clauseType: 'royalty',           clauseText: 'Gold sliding scale 5–12% (12% ceiling above USD 4,500/oz) and lithium 5–12% (USD 1,500–3,200/t).', pageNumber: 2, confidence: 0.96 },
+    ],
+  },
+  {
+    id: 'DOC-014', title: "Côte d'Ivoire 2025 Finance Act – Royalty Brief", documentType: 'regulatory', operatorId: undefined, agreementId: undefined, countryId: 'CIV',
+    uploadDate: '2025-01-10', lastModified: '2025-01-10', version: 'v1.0', fileSize: '0.9 MB', uploadedBy: 'Policy Unit', tags: ['regulatory', 'royalty', 'finance act'], hash: 'sha256:d2e3f4a5',
+    extractedClauses: [
+      { id: 'CL-025', documentId: 'DOC-014', clauseType: 'royalty',           clauseText: 'Ad-valorem gold royalty raised up to 8% above USD 2,000/oz, retroactive to January 2025.', pageNumber: 1, confidence: 0.95 },
+    ],
+  },
+  {
+    id: 'DOC-015', title: 'SMB-Winning Boké Convention', documentType: 'agreement', agreementId: 'AGR-002', operatorId: 'OP-02', countryId: 'GIN',
+    uploadDate: '2014-03-20', lastModified: '2023-07-01', version: 'v1.5', fileSize: '3.6 MB', uploadedBy: 'SOGUIPAMI', tags: ['bauxite', 'smb', 'boke'], hash: 'sha256:e3f4a5b6',
+    extractedClauses: [
+      { id: 'CL-026', documentId: 'DOC-015', clauseType: 'local_content',     clauseText: 'Local Development Fund contribution of 0.5% of annual turnover; minimum 65% Guinean nationals.', pageNumber: 16, confidence: 0.9 },
+    ],
+  },
+  {
+    id: 'DOC-016', title: 'Newmont Ahafo North Mining Lease', documentType: 'agreement', agreementId: 'AGR-008', operatorId: 'OP-07', countryId: 'GHA',
+    uploadDate: '2020-04-05', lastModified: '2025-09-19', version: 'v2.0', fileSize: '5.0 MB', uploadedBy: 'Minerals Commission', tags: ['gold', 'newmont', 'ahafo north'], hash: 'sha256:f4a5b6c7',
+    extractedClauses: [
+      { id: 'CL-027', documentId: 'DOC-016', clauseType: 'stabilization',     clauseText: 'Parliamentary ratification under Article 268 of the Constitution; fiscal terms per Royalty Regulations 2025.', pageNumber: 10, confidence: 0.88 },
+    ],
+  },
+  {
+    id: 'DOC-017', title: 'Perseus Yaouré Environmental Audit 2025', documentType: 'audit_report', agreementId: 'AGR-016', operatorId: 'OP-13', countryId: 'CIV',
+    uploadDate: '2025-12-10', lastModified: '2025-12-10', version: 'v1.0', fileSize: '4.1 MB', uploadedBy: 'Independent Auditor', tags: ['audit', 'environmental', 'yaoure'], hash: 'sha256:a5b6c7d8',
+    extractedClauses: [
+      { id: 'CL-028', documentId: 'DOC-017', clauseType: 'environmental',     clauseText: 'Rehabilitation escrow fully funded; quarterly water-quality monitoring confirmed compliant.', pageNumber: 6, confidence: 0.91 },
+    ],
+  },
+  {
+    id: 'DOC-018', title: 'Ghana Manganese Nsuta Concession', documentType: 'agreement', agreementId: 'AGR-013', operatorId: 'OP-11', countryId: 'GHA',
+    uploadDate: '2005-09-10', lastModified: '2024-10-01', version: 'v1.2', fileSize: '3.2 MB', uploadedBy: 'Minerals Commission', tags: ['manganese', 'gmc', 'nsuta'], hash: 'sha256:b6c7d8e9',
+    extractedClauses: [
+      { id: 'CL-029', documentId: 'DOC-018', clauseType: 'royalty',           clauseText: '5% royalty referenced to the CRU Manganese price index, payable quarterly; 10% state free-carry.', pageNumber: 12, confidence: 0.93 },
+      { id: 'CL-030', documentId: 'DOC-018', clauseType: 'termination',       clauseText: 'Value-addition refinery milestone is a condition of concession continuance.', pageNumber: 26, confidence: 0.82 },
+    ],
+  },
+  {
+    id: 'DOC-019', title: 'Allied Gold CDI Complex ESG Report 2025', documentType: 'esg_report', agreementId: 'AGR-019', operatorId: 'OP-15', countryId: 'CIV',
+    uploadDate: '2026-02-28', lastModified: '2026-02-28', version: 'v1.0', fileSize: '7.8 MB', uploadedBy: 'Allied Gold ESG Team', tags: ['esg', 'agbaou', 'bonikro'], hash: 'sha256:c7d8e9f0',
+    extractedClauses: [
+      { id: 'CL-031', documentId: 'DOC-019', clauseType: 'environmental',     clauseText: 'Annual environmental audit and rehabilitation escrow funding maintained under Article 142.', pageNumber: 14, confidence: 0.86 },
+    ],
+  },
+  {
+    id: 'DOC-020', title: 'Tongon Closure Plan (Draft, pre-sale)', documentType: 'closure_plan', agreementId: 'AGR-018', operatorId: 'OP-14', countryId: 'CIV',
+    uploadDate: '2025-06-20', lastModified: '2025-06-20', version: 'v0.9', fileSize: '3.9 MB', uploadedBy: 'Barrick Closure Team', tags: ['closure', 'tongon', 'draft'], hash: 'sha256:d8e9f0a1',
+    extractedClauses: [
+      { id: 'CL-032', documentId: 'DOC-020', clauseType: 'environmental',     clauseText: 'Closure provision funded to 82%; acquiring party to assume residual rehabilitation obligations.', pageNumber: 8, confidence: 0.85 },
+    ],
+  },
+];
+
+// ─── System Alerts (Automated Alerts) ─────────────────────────
+// Rule-generated alerts derived from the same data conditions that
+// drive the risk register, expiry windows, and regulatory feed.
+
+export const SYSTEM_ALERTS: SystemAlert[] = [
+  { id: 'SA-01', category: 'risk',       priority: 'critical', title: 'ICSID claim — Axis International (USD 28.9 bn)', description: 'Investor-state arbitration filed against Guinea following the May 2025 Boffa permit revocation.', triggerRule: 'ICSID arbitration registered against host state', entityType: 'operator', entityId: 'OP-06', createdAt: '2026-01-16', acknowledged: false, actionUrl: '/risk/RF-002' },
+  { id: 'SA-02', category: 'esg',        priority: 'critical', title: 'Galamsey water contamination — 32,000 NTU', description: 'Pra/Ankobra basin turbidity at 16× the GWCL treatment-design threshold around the Obuasi corridor.', triggerRule: 'River turbidity above 2,000 NTU treatment threshold', entityType: 'agreement', entityId: 'AGR-010', createdAt: '2026-02-05', acknowledged: false, actionUrl: '/esg' },
+  { id: 'SA-03', category: 'renewal',    priority: 'high',     title: 'Damang lease non-renewal — investor friction', description: 'Gold Fields Damang lease expired 18 Apr 2025; Minerals Commission declined renewal.', triggerRule: 'Mining lease expired and renewal declined', entityType: 'agreement', entityId: 'AGR-009', createdAt: '2025-04-18', acknowledged: false, actionUrl: '/risk/RF-007' },
+  { id: 'SA-04', category: 'regulatory', priority: 'high',     title: 'Ghana Royalty Regulations 2025 — 12% ceiling breached', description: 'Gold above USD 5,000/oz trips the 12% sliding-scale ceiling for non-stabilised tonnage.', triggerRule: 'Commodity price crosses statutory royalty band', entityType: 'regulation', entityId: 'RC-01', createdAt: '2026-05-20', acknowledged: false, actionUrl: '/regulatory' },
+  { id: 'SA-05', category: 'compliance', priority: 'high',     title: 'Nsuta refinery milestone missed', description: 'Ghana Manganese USD 450 m refinery sod-cut (Nov 2024) missed with no revised timeline.', triggerRule: 'Infrastructure milestone past due with 0% progress', entityType: 'agreement', entityId: 'AGR-013', createdAt: '2025-01-15', acknowledged: false, actionUrl: '/risk/RF-009' },
+  { id: 'SA-06', category: 'esg',        priority: 'high',     title: 'Friguia rehabilitation escrow under-funded (65%)', description: 'Rusal Friguia Article 142 rehabilitation escrow below the funding threshold.', triggerRule: 'Rehabilitation provision below funded threshold', entityType: 'agreement', entityId: 'AGR-003', createdAt: '2026-01-15', acknowledged: false, actionUrl: '/esg' },
+  { id: 'SA-07', category: 'regulatory', priority: 'medium',   title: "Côte d'Ivoire 2025 Finance Act — royalty hike", description: 'Ad-valorem gold royalty raised up to 8% above USD 2,000/oz, retroactive to January 2025.', triggerRule: 'New fiscal regulation enacted', entityType: 'regulation', entityId: 'RC-04', createdAt: '2025-01-10', acknowledged: false, actionUrl: '/regulatory' },
+  { id: 'SA-08', category: 'renewal',    priority: 'medium',   title: 'Tongon change-of-control — Ministerial approval', description: 'Barrick Tongon sale to Atlantic/Zijin requires Ministerial approval under the convention.', triggerRule: 'Ownership change triggers change-of-control clause', entityType: 'agreement', entityId: 'AGR-018', createdAt: '2025-06-01', acknowledged: false, actionUrl: '/risk/RF-010' },
+  { id: 'SA-09', category: 'deadline',   priority: 'medium',   title: 'Tarkwa stability agreement expires 2028', description: 'Gold Fields Tarkwa fiscal stability lapses in 2028; begin renewal pre-consultation.', triggerRule: 'Agreement within 36-month renewal horizon', entityType: 'agreement', entityId: 'AGR-009', createdAt: '2026-04-01', acknowledged: false, actionUrl: '/agreements/AGR-009' },
+  { id: 'SA-10', category: 'deadline',   priority: 'medium',   title: 'Bonikro convention expires Jun 2028', description: 'Allied Gold Bonikro convention approaches expiry with closure planning pending.', triggerRule: 'Agreement within 36-month renewal horizon', entityType: 'agreement', entityId: 'AGR-020', createdAt: '2026-04-01', acknowledged: false, actionUrl: '/agreements/AGR-020' },
+  { id: 'SA-11', category: 'compliance', priority: 'medium',   title: 'CBG community grievances unresolved (13 villages)', description: 'IFC CAO mediation around Sangarédi open since 2019 with no full resolution confirmed.', triggerRule: 'Community grievance open beyond SLA', entityType: 'agreement', entityId: 'AGR-001', createdAt: '2026-02-10', acknowledged: false, actionUrl: '/risk/RF-003' },
+  { id: 'SA-12', category: 'regulatory', priority: 'high',     title: 'Guinea mass permit revocations (≈180 licences)', description: 'Transitional government cancelled 129 exploration permits in May 2025 after an earlier purge of 51.', triggerRule: 'Systemic enforcement action affecting licences', entityType: 'regulation', entityId: 'RC-08', createdAt: '2025-05-26', acknowledged: false, actionUrl: '/regulatory' },
+  { id: 'SA-13', category: 'esg',        priority: 'medium',   title: 'Simandou PS6 biodiversity monitoring due', description: 'Operational-phase habitat monitoring required along the 600 km rail corridor.', triggerRule: 'PS6 critical-habitat monitoring interval reached', entityType: 'agreement', entityId: 'AGR-004', createdAt: '2026-03-01', acknowledged: false, actionUrl: '/esg' },
+  { id: 'SA-14', category: 'payment',    priority: 'low',      title: 'CBG quarterly royalty filing window', description: 'Extraction-tax payment due within 30 days of quarter close (Q1 2026).', triggerRule: 'Royalty payment window opening', entityType: 'agreement', entityId: 'AGR-001', createdAt: '2026-04-05', acknowledged: false, actionUrl: '/agreements/AGR-001' },
+  { id: 'SA-15', category: 'renewal',    priority: 'low',      title: 'Ewoyaa lithium lease ratified', description: 'Atlantic Lithium Ewoyaa lease ratified by Parliament 19 Mar 2026; monitor financing close.', triggerRule: 'Lease ratified under revised fiscal regime', entityType: 'agreement', entityId: 'AGR-012', createdAt: '2026-03-20', acknowledged: false, actionUrl: '/risk/RF-008' },
+];
+
+// ─── Public Datasets + Publication Logs (M12) ─────────────────
+
+export const PUBLIC_DATASETS: PublicDataset[] = [
+  // Guinea
+  { id: 'PD-01', name: 'Guinea Mining Revenue Receipts', description: 'Quarterly royalty, extraction-tax and dividend receipts by operator.', category: 'revenue',       countryId: 'GIN', recordCount: 312, lastPublished: '2026-04-30', format: 'CSV',   isPublic: true,  downloadCount: 1840, dataFields: ['operator', 'commodity', 'period', 'royalty_usd', 'extraction_tax_usd'] },
+  { id: 'PD-02', name: 'Guinea Active Mining Licences',   description: 'Register of active conventions and exploration permits with status.',     category: 'licenses',      countryId: 'GIN', recordCount: 187, lastPublished: '2026-03-15', format: 'JSON',  isPublic: true,  downloadCount: 920,  dataFields: ['licence_id', 'operator', 'commodity', 'area_km2', 'status'] },
+  { id: 'PD-03', name: 'Guinea Bauxite & Iron-Ore Production', description: 'Quarterly production tonnage by mine and commodity.',                 category: 'production',    countryId: 'GIN', recordCount: 264, lastPublished: '2026-04-30', format: 'Excel', isPublic: false, downloadCount: 0,    dataFields: ['mine', 'commodity', 'period', 'tonnes', 'export_port'] },
+  // Ghana
+  { id: 'PD-04', name: 'Ghana Mineral Royalty Receipts',  description: 'Sliding-scale gold and lithium royalty receipts by operator.',          category: 'revenue',       countryId: 'GHA', recordCount: 401, lastPublished: '2026-04-30', format: 'CSV',   isPublic: true,  downloadCount: 3120, dataFields: ['operator', 'commodity', 'period', 'royalty_rate', 'royalty_usd'] },
+  { id: 'PD-05', name: 'Ghana Gold Production by Operator', description: 'Large-scale and ASM gold output by operator and quarter.',             category: 'production',    countryId: 'GHA', recordCount: 356, lastPublished: '2026-04-30', format: 'CSV',   isPublic: true,  downloadCount: 2470, dataFields: ['operator', 'period', 'ounces', 'category'] },
+  { id: 'PD-06', name: 'Ghana Galamsey Water-Quality Index', description: 'River turbidity readings vs the 2,000 NTU treatment threshold.',       category: 'esg',           countryId: 'GHA', recordCount: 540, lastPublished: '2026-05-01', format: 'JSON',  isPublic: true,  downloadCount: 4015, dataFields: ['basin', 'date', 'turbidity_ntu', 'threshold_ntu', 'plant_status'] },
+  // Côte d'Ivoire
+  { id: 'PD-07', name: "Côte d'Ivoire Gold Royalty Receipts", description: 'Ad-valorem gold royalty receipts (2025 Finance Act) by operator.',    category: 'revenue',       countryId: 'CIV', recordCount: 228, lastPublished: '2026-04-30', format: 'CSV',   isPublic: true,  downloadCount: 1360, dataFields: ['operator', 'period', 'royalty_rate', 'royalty_usd'] },
+  { id: 'PD-08', name: "Côte d'Ivoire Mining Permits Register", description: 'Active mining permits and exploration licences with coordinates.',   category: 'licenses',      countryId: 'CIV', recordCount: 143, lastPublished: '2026-02-20', format: 'JSON',  isPublic: true,  downloadCount: 680,  dataFields: ['permit_id', 'operator', 'commodity', 'region', 'status'] },
+  { id: 'PD-09', name: "Côte d'Ivoire Local Content Delivery", description: 'Article 125 community-fund and local-content delivery by operator.',   category: 'local_content', countryId: 'CIV', recordCount: 96,  lastPublished: '2026-03-10', format: 'Excel', isPublic: false, downloadCount: 0,    dataFields: ['operator', 'category', 'promised', 'actual', 'period'] },
+];
+
+export const PUBLICATION_LOGS: PublicationLog[] = [
+  { id: 'PL-01', datasetId: 'PD-01', publishedAt: '2026-04-30', publishedBy: 'EITI Guinea Secretariat', recordCount: 312, status: 'published', notes: 'Q1 2026 revenue release' },
+  { id: 'PL-02', datasetId: 'PD-04', publishedAt: '2026-04-30', publishedBy: 'Ghana Revenue Authority',  recordCount: 401, status: 'published', notes: 'Q1 2026 royalty release' },
+  { id: 'PL-03', datasetId: 'PD-06', publishedAt: '2026-05-01', publishedBy: 'Water Resources Commission', recordCount: 540, status: 'published', notes: 'Monthly turbidity update' },
+  { id: 'PL-04', datasetId: 'PD-07', publishedAt: '2026-04-30', publishedBy: 'DGI Côte d\'Ivoire',        recordCount: 228, status: 'published', notes: 'Q1 2026 royalty release' },
+  { id: 'PL-05', datasetId: 'PD-05', publishedAt: '2026-04-30', publishedBy: 'Minerals Commission',       recordCount: 356, status: 'published' },
+  { id: 'PL-06', datasetId: 'PD-02', publishedAt: '2026-03-15', publishedBy: 'SOGUIPAMI',                 recordCount: 187, status: 'published' },
+  { id: 'PL-07', datasetId: 'PD-08', publishedAt: '2026-02-20', publishedBy: 'SODEMI',                    recordCount: 143, status: 'published' },
+  { id: 'PL-08', datasetId: 'PD-03', publishedAt: '2026-04-30', publishedBy: 'SOGUIPAMI',                 recordCount: 264, status: 'draft',     notes: 'Pending Ministerial sign-off' },
+  { id: 'PL-09', datasetId: 'PD-09', publishedAt: '2026-03-10', publishedBy: 'SODEMI',                    recordCount: 96,  status: 'draft',     notes: 'Internal review' },
+  { id: 'PL-10', datasetId: 'PD-04', publishedAt: '2026-01-31', publishedBy: 'Ghana Revenue Authority',   recordCount: 388, status: 'published', notes: 'Q4 2025 revenue release' },
+  { id: 'PL-11', datasetId: 'PD-06', publishedAt: '2026-04-01', publishedBy: 'Water Resources Commission', recordCount: 512, status: 'published', notes: 'Monthly turbidity update' },
+  { id: 'PL-12', datasetId: 'PD-01', publishedAt: '2026-01-31', publishedBy: 'EITI Guinea Secretariat',   recordCount: 298, status: 'retracted', notes: 'Superseded — restated Q4 2025 figures' },
+];
+
+// ─── Regulatory Changes + Impacts (M13) ───────────────────────
+
+export const REGULATORY_CHANGES: RegulatoryChange[] = [
+  { id: 'RC-01', countryId: 'GHA', title: 'Minerals and Mining (Royalty) Regulations 2025', category: 'royalty', status: 'enacted', effectiveDate: '2025-07-01', announcedDate: '2025-04-15', source: 'Ghana Gazette / Minerals Commission', impactSeverity: 'high', affectedAgreementIds: ['AGR-007', 'AGR-008', 'AGR-009', 'AGR-010', 'AGR-011', 'AGR-012'], stabilizationConflict: true,
+    description: 'Sliding-scale royalty for gold (5–12%, 12% above USD 4,500/oz) and lithium (5–12%, USD 1,500–3,200/t spodumene).',
+    summary: 'Replaces the flat 5% royalty with a price-linked sliding scale; the 12% ceiling is already breached with gold above USD 5,000/oz. Conflicts with the Gold Fields Tarkwa stability clause running through 2028.' },
+  { id: 'RC-02', countryId: 'GHA', title: 'Ghana Gold Board Act 2025 (Act 1140)', category: 'mining_law', status: 'enacted', effectiveDate: '2025-04-02', announcedDate: '2025-03-10', source: 'Parliament of Ghana', impactSeverity: 'high', affectedAgreementIds: ['AGR-007', 'AGR-009', 'AGR-010', 'AGR-011'], stabilizationConflict: false,
+    description: 'GoldBod is the sole authority to buy, sell, weigh, grade, assay, value and export gold in Ghana.',
+    summary: 'Centralises gold marketing and export under GoldBod; large-scale producers must align sales and assay reporting with the new statutory channel.' },
+  { id: 'RC-03', countryId: 'GHA', title: 'Environmental Protection Act 2025 (Act 1124)', category: 'environmental', status: 'enacted', effectiveDate: '2025-08-01', announcedDate: '2025-05-20', source: 'Parliament of Ghana', impactSeverity: 'medium', affectedAgreementIds: ['AGR-009', 'AGR-010', 'AGR-011'], stabilizationConflict: false,
+    description: 'Strengthens environmental enforcement and escalation pathways, including water-quality thresholds.',
+    summary: 'Introduces tougher enforcement against mining-driven water pollution; pairs with continuous turbidity monitoring calibrated to the 2,000 NTU treatment-design standard.' },
+  { id: 'RC-04', countryId: 'CIV', title: '2025 Finance Act — Gold Royalty Increase', category: 'royalty', status: 'enacted', effectiveDate: '2025-01-01', announcedDate: '2024-12-20', source: 'Journal Officiel / DGI', impactSeverity: 'high', affectedAgreementIds: ['AGR-014', 'AGR-015', 'AGR-016', 'AGR-017', 'AGR-018', 'AGR-019', 'AGR-020'], stabilizationConflict: true,
+    description: 'Ad-valorem gold royalty raised up to 8% above USD 2,000/oz, retroactive to January 2025 (replacing the 3–6% range).',
+    summary: 'Raises state take across all Ivorian gold conventions; interacts with five-year income-tax holidays still active at Ity, Lafigué and Lafigué-era permits.' },
+  { id: 'RC-05', countryId: 'CIV', title: 'PIRME — Integrated Minerals & Energy Policy', category: 'mining_law', status: 'enacted', effectiveDate: '2025-12-03', announcedDate: '2025-12-03', source: 'Council of Ministers', impactSeverity: 'medium', affectedAgreementIds: [], stabilizationConflict: false,
+    description: 'CFA 38,000 bn (~USD 67–68 bn) 15-year mining-energy framework targeting GDP share 7% (2022) → 14% (2040).',
+    summary: 'Sets the long-run fiscal and investment architecture for the sector; future conventions are expected to anchor to PIRME targets and local-value-addition goals.' },
+  { id: 'RC-06', countryId: 'CIV', title: 'Beneficial Ownership Register Law (Decree 2024-583)', category: 'ownership', status: 'enacted', effectiveDate: '2024-04-01', announcedDate: '2024-03-15', source: 'CEPICI', impactSeverity: 'low', affectedAgreementIds: ['AGR-018'], stabilizationConflict: false,
+    description: 'Establishes a beneficial-ownership register; implementing decree restricts public access to entity-level data only.',
+    summary: 'Improves UBO transparency but limits public disclosure depth; relevant to change-of-control diligence on the Tongon sale.' },
+  { id: 'RC-07', countryId: 'GIN', title: 'Beneficial Ownership Legislation (resubmitted 2024)', category: 'ownership', status: 'under_review', effectiveDate: '2026-12-31', announcedDate: '2024-06-01', source: 'Assemblée / SOGUIPAMI', impactSeverity: 'medium', affectedAgreementIds: ['AGR-004', 'AGR-005'], stabilizationConflict: false,
+    description: 'Draft beneficial-ownership disclosure law first drafted 2019, resubmitted 2024, pending enactment.',
+    summary: 'Would require UBO disclosure for mining licences; pending enactment leaves opaque Chinese-SOE layered structures (WCS/SimFer) only partially traceable.' },
+  { id: 'RC-08', countryId: 'GIN', title: 'Mass Exploration Permit Revocations (May 2025)', category: 'mining_law', status: 'enacted', effectiveDate: '2025-05-26', announcedDate: '2025-05-26', source: 'Ministère des Mines', impactSeverity: 'high', affectedAgreementIds: ['AGR-006'], stabilizationConflict: false,
+    description: 'Transitional government cancelled 129 exploration permits after an earlier purge of 51 mining licences.',
+    summary: 'Roughly 180 licences revoked in May 2025; drove the Axis International USD 28.9 bn ICSID claim and related arbitration docket. Triggers Article 145 work-programme reviews.' },
+  { id: 'RC-09', countryId: 'GIN', title: 'Mining Code Article 145 Work-Programme Enforcement', category: 'mining_law', status: 'enacted', effectiveDate: '2025-06-01', announcedDate: '2025-05-30', source: 'Ministère des Mines', impactSeverity: 'medium', affectedAgreementIds: ['AGR-001', 'AGR-002', 'AGR-003'], stabilizationConflict: false,
+    description: 'Permits revocable where 50% of the committed work programme is unfinished after two years.',
+    summary: 'Codifies the enforcement trigger behind the 2025 revocations; all active permit-holders should audit work-programme delivery.' },
+  { id: 'RC-10', countryId: 'GHA', title: 'Proposed Growth & Sustainability Levy Extension', category: 'tax_code', status: 'proposed', effectiveDate: '2027-01-01', announcedDate: '2026-03-01', source: 'Ministry of Finance', impactSeverity: 'medium', affectedAgreementIds: ['AGR-007', 'AGR-009', 'AGR-010'], stabilizationConflict: true,
+    description: 'Proposed extension of the Growth & Sustainability Levy on mining profits beyond its current sunset.',
+    summary: 'Under consultation; if enacted it would raise the effective tax burden on large-scale gold producers and may engage stability-clause carve-outs.' },
+];
+
+export const REGULATORY_IMPACTS: RegulatoryImpact[] = [
+  // RC-01 Ghana royalty sliding scale
+  { regulationId: 'RC-01', agreementId: 'AGR-007', impactType: 'royalty_increase',        description: 'Newmont Ahafo South non-stabilised tonnage moves to the 12% ceiling with gold above USD 5,000/oz.', estimatedFinancialImpactUSD: 95_000_000 },
+  { regulationId: 'RC-01', agreementId: 'AGR-009', impactType: 'stabilization_conflict',  description: 'Tarkwa fiscal stability through 2028 conflicts with the new sliding scale on stabilised tonnage.', estimatedFinancialImpactUSD: 60_000_000 },
+  { regulationId: 'RC-01', agreementId: 'AGR-010', impactType: 'royalty_increase',        description: 'Obuasi royalty rises under the sliding scale at prevailing gold prices.', estimatedFinancialImpactUSD: 42_000_000 },
+  { regulationId: 'RC-01', agreementId: 'AGR-012', impactType: 'royalty_increase',        description: 'Ewoyaa lithium royalty set on the 5–12% spodumene scale per the ratified 2026 lease.', estimatedFinancialImpactUSD: 8_000_000 },
+  // RC-02 GoldBod
+  { regulationId: 'RC-02', agreementId: 'AGR-007', impactType: 'new_obligation',          description: 'Gold sales, assay and export must route through GoldBod statutory channels.' },
+  { regulationId: 'RC-02', agreementId: 'AGR-010', impactType: 'new_obligation',          description: 'Obuasi gold marketing realigned to GoldBod; reporting cadence updated.' },
+  // RC-03 Environmental Protection Act
+  { regulationId: 'RC-03', agreementId: 'AGR-010', impactType: 'compliance_gap',          description: 'Pra/Ankobra turbidity at 32,000 NTU far exceeds the strengthened enforcement threshold.', estimatedFinancialImpactUSD: 15_000_000 },
+  { regulationId: 'RC-03', agreementId: 'AGR-011', impactType: 'new_obligation',          description: 'Iduapriem must extend continuous water-quality monitoring under Act 1124.' },
+  // RC-04 CIV Finance Act
+  { regulationId: 'RC-04', agreementId: 'AGR-014', impactType: 'royalty_increase',        description: 'Ity ad-valorem royalty up to 8% above USD 2,000/oz, partly offset by the tax holiday.', estimatedFinancialImpactUSD: 28_000_000 },
+  { regulationId: 'RC-04', agreementId: 'AGR-018', impactType: 'royalty_increase',        description: 'Tongon royalty rises as production declines, pressuring marginal economics ahead of sale.', estimatedFinancialImpactUSD: 12_000_000 },
+  { regulationId: 'RC-04', agreementId: 'AGR-017', impactType: 'stabilization_conflict',  description: 'Sissingué high-AISC economics strained by the retroactive royalty on a near-closure asset.', estimatedFinancialImpactUSD: 4_000_000 },
+  // RC-08 Guinea revocations
+  { regulationId: 'RC-08', agreementId: 'AGR-006', impactType: 'compliance_gap',          description: 'Boffa permit revocation crystallised into the GAC settlement and ICSID exposure.', estimatedFinancialImpactUSD: 765_000_000 },
+  { regulationId: 'RC-09', agreementId: 'AGR-003', impactType: 'new_obligation',          description: 'Rusal Friguia must evidence Article 145 work-programme delivery to avoid revocation risk.' },
+  // RC-07 Guinea BO
+  { regulationId: 'RC-07', agreementId: 'AGR-005', impactType: 'new_obligation',          description: 'WCS layered Chinese-SOE ownership would require UBO disclosure once enacted.' },
+  // RC-10 proposed levy
+  { regulationId: 'RC-10', agreementId: 'AGR-007', impactType: 'new_obligation',          description: 'Proposed levy extension would raise Newmont Ahafo effective tax if enacted in 2027.', estimatedFinancialImpactUSD: 18_000_000 },
+];
+
 // ─── Master export ────────────────────────────────────────────
 
 export interface SeedData {
@@ -1042,6 +1426,15 @@ export interface SeedData {
   localContentRecords: LocalContentRecord[];
   documentAccessLogs: DocumentAccessLog[];
   eitiReportSections: EITIReportSection[];
+  esgMetrics: ESGMetric[];
+  mineClosures: MineClosure[];
+  commodityMarketData: CommodityMarketData[];
+  managedDocuments: ManagedDocument[];
+  systemAlerts: SystemAlert[];
+  publicDatasets: PublicDataset[];
+  publicationLogs: PublicationLog[];
+  regulatoryChanges: RegulatoryChange[];
+  regulatoryImpacts: RegulatoryImpact[];
 }
 
 export function generateSeedData(): SeedData {
@@ -1060,6 +1453,15 @@ export function generateSeedData(): SeedData {
     localContentRecords: LOCAL_CONTENT_RECORDS,
     documentAccessLogs: DOCUMENT_ACCESS_LOGS,
     eitiReportSections: EITI_REPORT_SECTIONS,
+    esgMetrics: ESG_METRICS,
+    mineClosures: MINE_CLOSURES,
+    commodityMarketData: COMMODITY_MARKET_DATA,
+    managedDocuments: MANAGED_DOCUMENTS,
+    systemAlerts: SYSTEM_ALERTS,
+    publicDatasets: PUBLIC_DATASETS,
+    publicationLogs: PUBLICATION_LOGS,
+    regulatoryChanges: REGULATORY_CHANGES,
+    regulatoryImpacts: REGULATORY_IMPACTS,
   };
 }
 

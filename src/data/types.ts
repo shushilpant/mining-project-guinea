@@ -255,3 +255,156 @@ export interface EITIReportSection {
   lastUpdated: string;
 }
 
+// ============================================================
+// Expansion Modules — ESG, Market, Documents, Alerts,
+// Public Portal, Regulatory Tracker
+// ============================================================
+
+// ── ESG Tracking (M9) ──
+export interface ESGMetric {
+  id: string;
+  operatorId: string;
+  agreementId: string;
+  category: 'environmental' | 'social' | 'governance';
+  subcategory: string; // e.g. 'water_usage', 'carbon_emissions', 'tailings_dam', 'community_grievance', 'rehab_provision'
+  metricName: string;
+  targetValue: number;
+  actualValue: number;
+  unit: string;
+  reportingPeriod: string;
+  trend: 'improving' | 'stable' | 'declining';
+  lastUpdated: string;
+}
+
+export interface MineClosure {
+  id: string;
+  agreementId: string;
+  operatorId: string;
+  mineName: string;
+  estimatedClosureDate: string;
+  rehabilitationProvisionUSD: number;
+  rehabilitationSpentUSD: number;
+  closurePlanStatus: 'approved' | 'pending' | 'overdue';
+  environmentalBondUSD: number;
+  lastAuditDate: string;
+}
+
+// ── Market Intelligence (M10) ──
+export interface CommodityMarketData {
+  commodity: Commodity;
+  currentPrice: number;
+  priceUnit: string;
+  change24h: number;
+  change7d: number;
+  change30d: number;
+  yearHigh: number;
+  yearLow: number;
+  lastUpdated: string;
+}
+
+export interface RevenueImpactScenario {
+  commodity: Commodity;
+  priceChangePercent: number;
+  currentRevenue: number;
+  projectedRevenue: number;
+  impactUSD: number;
+}
+
+// ── Document Management (M11) ──
+export interface ManagedDocument {
+  id: string;
+  title: string;
+  documentType: 'agreement' | 'amendment' | 'audit_report' | 'esg_report' | 'closure_plan' | 'regulatory';
+  agreementId?: string;
+  operatorId?: string;
+  countryId: string;
+  uploadDate: string;
+  lastModified: string;
+  version: string;
+  fileSize: string;
+  uploadedBy: string;
+  tags: string[];
+  extractedClauses: ExtractedClause[];
+  hash: string;
+}
+
+export interface ExtractedClause {
+  id: string;
+  documentId: string;
+  clauseType: 'royalty' | 'stabilization' | 'dispute_resolution' | 'local_content' | 'environmental' | 'termination' | 'force_majeure';
+  clauseText: string;
+  pageNumber: number;
+  confidence: number; // 0-1, simulated AI confidence
+}
+
+// ── Automated Alerts ──
+export type AlertPriority = 'critical' | 'high' | 'medium' | 'low';
+export type AlertCategory = 'compliance' | 'payment' | 'deadline' | 'renewal' | 'risk' | 'regulatory' | 'esg';
+
+export interface SystemAlert {
+  id: string;
+  category: AlertCategory;
+  priority: AlertPriority;
+  title: string;
+  description: string;
+  triggerRule: string;
+  entityType: 'agreement' | 'operator' | 'commitment' | 'regulation';
+  entityId: string;
+  createdAt: string;
+  expiresAt?: string;
+  acknowledged: boolean;
+  acknowledgedBy?: string;
+  acknowledgedAt?: string;
+  actionUrl: string;
+}
+
+// ── Public Portal / Open Data (M12) ──
+export interface PublicDataset {
+  id: string;
+  name: string;
+  description: string;
+  category: 'revenue' | 'licenses' | 'production' | 'esg' | 'local_content';
+  countryId: string;
+  recordCount: number;
+  lastPublished: string;
+  format: 'CSV' | 'JSON' | 'Excel';
+  isPublic: boolean;
+  downloadCount: number;
+  dataFields: string[];
+}
+
+export interface PublicationLog {
+  id: string;
+  datasetId: string;
+  publishedAt: string;
+  publishedBy: string;
+  recordCount: number;
+  status: 'published' | 'draft' | 'retracted';
+  notes?: string;
+}
+
+// ── Regulatory Tracker (M13) ──
+export interface RegulatoryChange {
+  id: string;
+  countryId: string;
+  title: string;
+  description: string;
+  category: 'mining_law' | 'tax_code' | 'environmental' | 'labor' | 'ownership' | 'royalty';
+  status: 'enacted' | 'proposed' | 'under_review' | 'withdrawn';
+  effectiveDate: string;
+  announcedDate: string;
+  source: string;
+  impactSeverity: 'high' | 'medium' | 'low';
+  affectedAgreementIds: string[];
+  stabilizationConflict: boolean;
+  summary: string;
+}
+
+export interface RegulatoryImpact {
+  regulationId: string;
+  agreementId: string;
+  impactType: 'royalty_increase' | 'new_obligation' | 'stabilization_conflict' | 'compliance_gap';
+  description: string;
+  estimatedFinancialImpactUSD?: number;
+}
+
