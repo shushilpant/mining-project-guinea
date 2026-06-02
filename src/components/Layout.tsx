@@ -1,8 +1,7 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useCountry } from '@/context/CountryContext';
 import { CountrySelector } from '@/components/shared/CountrySelector';
-import { NotificationPanel } from '@/components/shared/NotificationPanel';
 import { AlertCenter } from '@/components/shared/AlertCenter';
 import { GlobalSearch } from '@/components/shared/GlobalSearch';
 import { AIAssistant } from '@/components/shared/AIAssistant';
@@ -13,11 +12,12 @@ import { HelpButton } from '@/components/shared/HelpButton';
 import { MODULES, moduleForPath } from '@/content/guide';
 import { useThemeStore } from '@/store/themeStore';
 import { useRole } from '@/hooks/useRole';
+import { useAuthStore } from '@/store/authStore';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, FileText, BarChart3, AlertTriangle,
   Globe, Scale, Clock, Settings, ChevronRight, Activity, ScrollText, Shield, Sun, Moon, TrendingUp, Users, Building2,
-  Leaf, LineChart, FolderSearch, Globe2, Gavel
+  Leaf, LineChart, FolderSearch, Globe2, Gavel, LogOut
 } from 'lucide-react';
 
 // Friendly labels, official names and module codes all come from the
@@ -111,7 +111,14 @@ export function Layout() {
   const { selectedCountry } = useCountry();
   const { theme, toggleTheme } = useThemeStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAdmin } = useRole();
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
   const [now, setNow] = useState(new Date());
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
   const [maxWidth, setMaxWidth] = useState(SIDEBAR_MAX);
@@ -119,6 +126,71 @@ export function Layout() {
   const draggingRef = useRef(false);
   const maxWidthRef = useRef(SIDEBAR_MAX);
   const navRef = useRef<HTMLElement>(null);
+
+  // ── Custom sidebar scrollbar ──────────────────────────────────────────────
+  // The native scrollbar is hidden (macOS overlay scrollbars can't be reliably
+  // themed via ::-webkit-scrollbar across browsers/OS settings), so we render
+  // our own thumb whose size and position mirror the nav's scroll state.
+  const [thumb, setThumb] = useState({ top: 0, height: 0, visible: false });
+  const thumbDragRef = useRef<{ startY: number; startScroll: number; thumbH: number } | null>(null);
+  const SB_INSET = 8; // top/bottom breathing room for the thumb track
+
+  const updateThumb = useCallback(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const { scrollTop, scrollHeight, clientHeight } = nav;
+    if (scrollHeight <= clientHeight + 1) {
+      setThumb((t) => (t.visible ? { ...t, visible: false } : t));
+      return;
+    }
+    const track = clientHeight - SB_INSET * 2;
+    const height = Math.max(32, (clientHeight / scrollHeight) * track);
+    const top = SB_INSET + (scrollTop / (scrollHeight - clientHeight)) * (track - height);
+    setThumb({ top, height, visible: true });
+  }, []);
+
+  // Recompute when the nav resizes (window resize) or its item set changes.
+  useLayoutEffect(() => {
+    updateThumb();
+    const nav = navRef.current;
+    if (!nav) return;
+    const ro = new ResizeObserver(updateThumb);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [updateThumb, isAdmin]);
+
+  const onThumbDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const nav = navRef.current;
+    if (!nav) return;
+    thumbDragRef.current = { startY: e.clientY, startScroll: nav.scrollTop, thumbH: thumb.height };
+    document.body.style.userSelect = 'none';
+  };
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = thumbDragRef.current;
+      const nav = navRef.current;
+      if (!d || !nav) return;
+      const { scrollHeight, clientHeight } = nav;
+      const range = clientHeight - SB_INSET * 2 - d.thumbH;
+      if (range <= 0) return;
+      const dy = e.clientY - d.startY;
+      nav.scrollTop = d.startScroll + (dy / range) * (scrollHeight - clientHeight);
+    };
+    const onUp = () => {
+      if (thumbDragRef.current) {
+        thumbDragRef.current = null;
+        document.body.style.userSelect = '';
+      }
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -265,24 +337,41 @@ export function Layout() {
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav ref={navRef} className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto relative z-10" aria-label="Primary">
-            <div className="px-2 pb-1.5 pt-0.5">
-              <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Modules</span>
-            </div>
+          {/* Navigation — native scrollbar hidden; custom themed thumb overlaid */}
+          <div className="relative flex-1 min-h-0">
+            <nav
+              ref={navRef}
+              onScroll={updateThumb}
+              className="h-full px-3 py-3 space-y-0.5 overflow-y-auto sidebar-scroll relative z-10"
+              aria-label="Primary"
+            >
+              <div className="px-2 pb-1.5 pt-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Modules</span>
+              </div>
 
-            {NAV_ITEMS.map((item) => <NavItem key={item.to} item={item} />)}
+              {NAV_ITEMS.map((item) => <NavItem key={item.to} item={item} />)}
 
-            {isAdmin && (
-              <>
-                <div className="mx-2 my-3 h-px bg-white/[0.08]" />
-                <div className="px-2 pb-1.5">
-                  <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">System</span>
-                </div>
-                {[ADMIN_NAV, AUDIT_NAV].map((item) => <NavItem key={item.to} item={item} />)}
-              </>
+              {isAdmin && (
+                <>
+                  <div className="mx-2 my-3 h-px bg-white/[0.08]" />
+                  <div className="px-2 pb-1.5">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">System</span>
+                  </div>
+                  {[ADMIN_NAV, AUDIT_NAV].map((item) => <NavItem key={item.to} item={item} />)}
+                </>
+              )}
+            </nav>
+
+            {/* Custom scrollbar thumb — drag to scroll, gold on hover. */}
+            {thumb.visible && (
+              <div
+                role="presentation"
+                onMouseDown={onThumbDown}
+                className="absolute right-[3px] z-20 w-1.5 cursor-pointer rounded-full bg-white/20 transition-colors hover:bg-gold-400/70 active:bg-gold-400/80"
+                style={{ top: thumb.top, height: thumb.height }}
+              />
             )}
-          </nav>
+          </div>
 
           {/* Sidebar footer */}
           <div className="px-4 py-4 space-y-2 relative z-10 border-t border-white/[0.08]">
@@ -326,8 +415,6 @@ export function Layout() {
                 <span className="w-px h-6 bg-line-strong shrink-0" />
                 <AIAssistant />
                 <span className="w-px h-6 bg-line-strong shrink-0" />
-                <NotificationPanel />
-                <span className="w-px h-6 bg-line-strong shrink-0" />
                 <AlertCenter />
                 <span className="w-px h-6 bg-line-strong shrink-0" />
                 <HelpButton />
@@ -355,6 +442,14 @@ export function Layout() {
                 >
                   {isAdmin ? 'Admin' : 'Read-Only'}
                 </span>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-2 border border-line-soft text-ink-3 transition-all hover:bg-status-danger/10 hover:text-status-danger hover:border-status-danger/30 group shrink-0"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <LogOut size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
+                </button>
               </div>
             </div>
           </header>

@@ -104,7 +104,11 @@ export function ChartPanel({
       </div>
 
       <div
-        className={cn('flex-1 p-5', !bodyClassName && 'min-h-[280px]', bodyClassName)}
+        // `flex-auto` (flex: 1 1 auto) — not `flex-1` (basis 0%) — so an explicit
+        // height in bodyClassName is honoured as the flex-basis. Otherwise, in a
+        // grid row where every cell is a ChartPanel, the basis-0 bodies give the
+        // row nothing to size against and the charts collapse to their headers.
+        className={cn('flex-auto p-5', !bodyClassName && 'min-h-[280px]', bodyClassName)}
         role={ariaLabel ? 'img' : undefined}
         aria-label={ariaLabel}
       >

@@ -194,7 +194,7 @@ function ReviewQueue({
   const displayList = tab === 'priority' ? priorityList : entries;
 
   return (
-    <div className="bg-white rounded-xl border border-line flex flex-col" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)', maxHeight: 520 }}>
+    <div className="bg-white rounded-xl border border-line flex flex-col h-full" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-line-soft shrink-0">
         <div className="flex items-center justify-between mb-3">
@@ -223,7 +223,7 @@ function ReviewQueue({
       </div>
 
       {/* List */}
-      <div className="overflow-y-auto flex-1">
+      <div className="overflow-y-auto flex-1 min-h-0">
         {displayList.length === 0 ? (
           <div className="py-8 text-center">
             <CheckCircle size={28} className="mx-auto mb-2" style={{ color: '#86efac' }} />
@@ -242,7 +242,7 @@ function ReviewQueue({
               <QueueGroup label="Anomalies" color="#7c3aed" entries={anomalies} focusedId={focusedId} onSelect={onSelect} onMarkReviewed={onMarkReviewed} onFlag={onFlag} onEscalate={onEscalate} />
             )}
             {tab === 'priority' && regular.length > 0 && (
-              <QueueGroup label="Unreviewed" color="#94a3b8" entries={regular.slice(0, 10)} focusedId={focusedId} onSelect={onSelect} onMarkReviewed={onMarkReviewed} onFlag={onFlag} onEscalate={onEscalate} />
+              <QueueGroup label="Unreviewed" color="#94a3b8" entries={regular.slice(0, 25)} focusedId={focusedId} onSelect={onSelect} onMarkReviewed={onMarkReviewed} onFlag={onFlag} onEscalate={onEscalate} />
             )}
             {tab === 'all' && displayList.map(e => (
               <QueueRow key={e.id} entry={e} isFocused={focusedId === e.id} onSelect={onSelect} onMarkReviewed={onMarkReviewed} onFlag={onFlag} onEscalate={onEscalate} />
@@ -735,12 +735,7 @@ export function AuditMonitorPage() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: `linear-gradient(135deg, ${FOREST} 0%, ${GREEN} 100%)`, boxShadow: '0 3px 12px rgba(6,43,29,0.25)' }}
-            >
-              <Activity size={16} className="text-white" />
-            </div>
+            <span className="w-1 h-9 rounded-full shrink-0 bg-gold-500" aria-hidden />
             <div>
               <h1 className="text-xl font-bold leading-tight" style={{ color: FOREST }}>
                 Activity Log
@@ -869,17 +864,23 @@ export function AuditMonitorPage() {
       </div>
 
       {/* ── Review queue + full table ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4 items-start">
+      <div className="grid grid-cols-3 gap-4 items-stretch">
 
-        {/* Review queue */}
-        <ReviewQueue
-          entries={entries}
-          focusedId={focusedId}
-          onSelect={handleSelect}
-          onMarkReviewed={handleQuickReview}
-          onFlag={handleQuickFlag}
-          onEscalate={handleQuickEscalate}
-        />
+        {/* Review queue — absolutely filled so its box height matches the adjacent
+            audit table exactly (the table drives the row height; the queue scrolls
+            internally to fit). */}
+        <div className="relative">
+          <div className="absolute inset-0">
+            <ReviewQueue
+              entries={entries}
+              focusedId={focusedId}
+              onSelect={handleSelect}
+              onMarkReviewed={handleQuickReview}
+              onFlag={handleQuickFlag}
+              onEscalate={handleQuickEscalate}
+            />
+          </div>
+        </div>
 
         {/* Full audit table */}
         <div

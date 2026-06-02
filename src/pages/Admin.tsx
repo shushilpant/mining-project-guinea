@@ -168,11 +168,14 @@ export function AdminPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-ink">Settings &amp; Data</h1>
-          <p className="text-sm text-ink-3 mt-0.5">
-            Manage the underlying data, rules, and the AI assistant.
-          </p>
+        <div className="flex items-start gap-3.5">
+          <span className="w-1 h-9 rounded-full shrink-0 mt-0.5 bg-gold-500" aria-hidden />
+          <div>
+            <h1 className="text-xl font-bold text-ink">Settings &amp; Data</h1>
+            <p className="text-sm text-ink-3 mt-0.5">
+              Manage the underlying data, rules, and the AI assistant.
+            </p>
+          </div>
         </div>
         <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full font-medium border border-blue-200">
           Administrator Session

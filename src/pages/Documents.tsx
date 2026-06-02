@@ -145,7 +145,7 @@ export function DocumentsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
         {/* Clause explorer */}
         <section className="glass-card flex flex-col lg:col-span-3">
           <div className="px-6 py-4 border-b border-line-soft bg-foreground/[0.01]">
@@ -158,7 +158,7 @@ export function DocumentsPage() {
               ))}
             </div>
           </div>
-          <div className="divide-y divide-line-soft max-h-[420px] overflow-y-auto slim-scrollbar">
+          <div className="divide-y divide-line-soft flex-1 min-h-[420px] max-h-[68vh] overflow-y-auto slim-scrollbar">
             {clauses.length === 0 ? (
               <div className="px-6 py-10 text-center text-ink-4 text-[13px]">No clauses of this type in scope.</div>
             ) : (

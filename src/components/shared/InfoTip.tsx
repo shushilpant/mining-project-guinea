@@ -10,7 +10,7 @@
 //   • Keyboard reachable; announces via aria-describedby + role.
 // ============================================================
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +42,7 @@ export function InfoTip({
 }: InfoTipProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
+  const popRef = useRef<HTMLSpanElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tipId = useId();
 
@@ -74,6 +75,21 @@ export function InfoTip({
 
   useEffect(() => () => clearTimer(), []);
 
+  // After the popover renders, measure its box and clamp it inside the
+  // viewport by nudging it horizontally. Done imperatively on the node (rather
+  // than via state) since it's a pure DOM-measurement sync with no re-render.
+  useLayoutEffect(() => {
+    const el = popRef.current;
+    if (!open || !el) return;
+    const margin = 8;
+    el.style.marginLeft = '0px';
+    const rect = el.getBoundingClientRect();
+    const overflowRight = rect.right - (window.innerWidth - margin);
+    const overflowLeft = margin - rect.left;
+    if (overflowRight > 0) el.style.marginLeft = `${-overflowRight}px`;
+    else if (overflowLeft > 0) el.style.marginLeft = `${overflowLeft}px`;
+  }, [open]);
+
   const alignClass =
     align === 'end' ? 'right-0' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-0';
 
@@ -103,6 +119,7 @@ export function InfoTip({
 
       {open && (
         <span
+          ref={popRef}
           id={tipId}
           role="tooltip"
           onMouseEnter={openNow}
@@ -111,7 +128,11 @@ export function InfoTip({
             'absolute top-full mt-1.5 z-50 block rounded-xl border border-line bg-surface p-3 text-left shadow-pop',
             alignClass,
           )}
-          style={{ width, pointerEvents: 'auto' }}
+          style={{
+            width,
+            maxWidth: 'calc(100vw - 16px)',
+            pointerEvents: 'auto',
+          }}
         >
           {title && (
             <span className="mb-1 block text-[12px] font-bold leading-snug text-ink">{title}</span>

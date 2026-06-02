@@ -184,20 +184,24 @@ export function ESGPage() {
           accent="#10B981"
           aiRegion="ESG Scorecard by Operator"
           ariaLabel="Radar chart of ESG pillar scores per operator."
-          bodyClassName="p-5 h-[340px]"
+          bodyClassName="p-5 h-[420px]"
         >
           {radarData.length === 0 ? (
             <div className="flex items-center justify-center h-full text-ink-4 text-sm">No ESG data in this scope.</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData} outerRadius="72%">
+              <RadarChart data={radarData} outerRadius="68%" margin={{ top: 24, right: 64, bottom: 16, left: 64 }}>
                 <PolarGrid stroke={GRID} />
-                <PolarAngleAxis dataKey="operator" tick={{ fontSize: 10, fill: AXIS }} />
-                <PolarRadiusAxis domain={[0, 100]} angle={90} tick={{ fontSize: 9, fill: AXIS }} />
+                <PolarAngleAxis
+                  dataKey="operator"
+                  tick={{ fontSize: 10, fill: AXIS }}
+                  tickSize={12}
+                />
+                <PolarRadiusAxis domain={[0, 100]} angle={90} tick={{ fontSize: 9, fill: AXIS }} tickCount={5} />
                 <Radar name="Environmental" dataKey="Environmental" stroke={CAT_COLORS.Environmental} fill={CAT_COLORS.Environmental} fillOpacity={0.12} />
                 <Radar name="Social" dataKey="Social" stroke={CAT_COLORS.Social} fill={CAT_COLORS.Social} fillOpacity={0.12} />
                 <Radar name="Governance" dataKey="Governance" stroke={CAT_COLORS.Governance} fill={CAT_COLORS.Governance} fillOpacity={0.12} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} iconType="circle" />
                 <Tooltip contentStyle={TOOLTIP_STYLE} />
               </RadarChart>
             </ResponsiveContainer>

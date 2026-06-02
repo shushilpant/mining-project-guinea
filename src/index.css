@@ -278,3 +278,21 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ── Scrollbars ───────────────────────────────────────────────────────────
+   A reusable thin, theme-aware scrollbar (used by dropdowns, lists, panels)
+   plus a dedicated treatment for the dark forest sidebar so its scrollbar
+   reads as part of the panel rather than a stray OS gutter. */
+.slim-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.slim-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.slim-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+}
+.slim-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--line); }
+
+/* Sidebar nav — native scrollbar fully hidden. macOS overlay scrollbars can't
+   be reliably themed via ::-webkit-scrollbar across browsers/OS settings, so a
+   custom thumb (rendered in Layout) stands in instead. */
+.sidebar-scroll { scrollbar-width: none; }
+.sidebar-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
