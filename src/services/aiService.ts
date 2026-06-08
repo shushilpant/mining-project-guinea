@@ -29,6 +29,27 @@ export interface ChatMessage {
   content: string;
 }
 
+// Permanent house style applied to EVERY outgoing request, regardless of which
+// prompt builder produced the messages. Injected as the first system message so
+// it governs all downstream personas. Deliberately silent: the model must never
+// announce, explain, or acknowledge this rule — it just writes this way.
+const HOUSE_STYLE_RULE: ChatMessage = {
+  role: 'system',
+  content:
+    'House style — always apply, in every response, without exception: write in ' +
+    'British English. Use British spelling (e.g. -ise/-isation not -ize/-ization; ' +
+    'colour, favour, behaviour, organisation, licence as a noun, defence, centre, ' +
+    'metre, analyse, catalogue, programme, modelling, travelled) together with ' +
+    'British vocabulary, punctuation and date conventions throughout. This rule is ' +
+    'permanent and silent: never mention it, never explain it, and never state that ' +
+    'you are using British English or that you were asked to — simply comply.',
+};
+
+/** Prepend the permanent house-style rule to any outgoing message list. */
+function applyHouseStyle(messages: ChatMessage[]): ChatMessage[] {
+  return [HOUSE_STYLE_RULE, ...messages];
+}
+
 export interface StreamHandlers {
   /** Called for every content chunk (already concatenated-safe). */
   onDelta: (chunk: string) => void;
@@ -54,6 +75,9 @@ interface ProviderConfig {
   url: string;
   headers: Record<string, string>;
 }
+
+const POLLINATIONS_MAX_ATTEMPTS = 4;
+const POLLINATIONS_429_BACKOFF_MS = [3_000, 8_000, 15_000];
 
 function resolveProvider(
   provider: AIProvider,
@@ -84,17 +108,91 @@ function resolveProvider(
       headers: { 'Content-Type': 'application/json' },
     };
   }
-  // pollinations — keyless, OpenAI-compatible endpoint.
+  // pollinations — keyless, OpenAI‑compatible endpoint.
   //
-  // IMPORTANT: do NOT add an Authorization / Bearer / token header on this
-  // branch. Pollinations is deprecating the legacy text API for AUTHENTICATED
-  // users (migration target: enter.pollinations.ai); ANONYMOUS requests to
-  // text.pollinations.ai continue to work normally. Our defaults keep us
-  // firmly in the anonymous bucket — `apiKey` is intentionally ignored here.
+  // We use our own Vercel Edge proxy `/api/ai` if running in production to
+  // bypass Pollinations' strict IP-based concurrency limits (1 per IP) by
+  // injecting a randomized X-Forwarded-For header. In local dev, we hit it directly.
+  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   return {
-    url: 'https://text.pollinations.ai/openai',
+    url: isLocalhost ? 'https://text.pollinations.ai/openai' : '/api/ai',
     headers: { 'Content-Type': 'application/json' },
   };
+}
+
+// Global mutex to prevent concurrent requests to Pollinations, which strictly
+// limits the free anonymous tier to 1 in-flight request per IP.
+let aiMutex = Promise.resolve();
+async function withAIMutex<T>(fn: () => Promise<T>): Promise<T> {
+  const unlock = aiMutex.catch(() => {});
+  let release!: () => void;
+  aiMutex = new Promise(resolve => { release = resolve; });
+  await unlock;
+  try { return await fn(); } finally { release(); }
+}
+
+function isPollinationsQueueFull(provider: AIProvider, res: Response): boolean {
+  return provider === 'pollinations' && res.status === 429;
+}
+
+function retryAfterMs(res: Response): number | null {
+  const header = res.headers.get('Retry-After');
+  if (!header) return null;
+
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+
+  const dateMs = Date.parse(header);
+  if (Number.isFinite(dateMs)) return Math.max(0, dateMs - Date.now());
+
+  return null;
+}
+
+async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (ms <= 0) return;
+  await new Promise<void>((resolve, reject) => {
+    const cleanup = () => signal?.removeEventListener('abort', onAbort);
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      cleanup();
+      reject(signal?.reason instanceof Error ? signal.reason : new DOMException('Aborted', 'AbortError'));
+    };
+
+    if (signal) {
+      if (signal.aborted) onAbort();
+      else signal.addEventListener('abort', onAbort, { once: true });
+    }
+  });
+}
+
+async function fetchWithPollinationsBackoff(
+  provider: AIProvider,
+  config: ProviderConfig,
+  body: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<Response> {
+  const maxAttempts = provider === 'pollinations' ? POLLINATIONS_MAX_ATTEMPTS : 1;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const res = await fetch(config.url, {
+      method: 'POST',
+      headers: config.headers,
+      signal,
+      body: JSON.stringify(body),
+    });
+
+    if (!isPollinationsQueueFull(provider, res) || attempt === maxAttempts - 1) return res;
+
+    await res.body?.cancel().catch(() => {});
+    const fallbackMs = POLLINATIONS_429_BACKOFF_MS[Math.min(attempt, POLLINATIONS_429_BACKOFF_MS.length - 1)];
+    await sleep(retryAfterMs(res) ?? fallbackMs, signal);
+  }
+
+  throw new Error('Pollinations retry loop exited unexpectedly.');
 }
 
 /**
@@ -102,32 +200,28 @@ function resolveProvider(
  * closes (also available via onDone). Caller can abort with `signal`.
  */
 export async function streamChat(opts: StreamOptions, handlers: StreamHandlers): Promise<string> {
-  const { provider, model, apiKey, localBaseUrl, messages, temperature = 0.3, maxTokens, signal } = opts;
-  const started = performance.now();
+  return withAIMutex(async () => {
+    const { provider, model, apiKey, localBaseUrl, messages, temperature = 0.3, maxTokens, signal } = opts;
+    const started = performance.now();
 
-  let config: ProviderConfig;
-  try {
-    config = resolveProvider(provider, apiKey, localBaseUrl);
-  } catch (e) {
-    handlers.onError?.(e as Error);
-    recordCall({ task: 'stream', model, provider, ms: 0, ok: false, error: (e as Error).message });
-    throw e;
-  }
+    let config: ProviderConfig;
+    try {
+      config = resolveProvider(provider, apiKey, localBaseUrl);
+    } catch (e) {
+      handlers.onError?.(e as Error);
+      recordCall({ task: 'stream', model, provider, ms: 0, ok: false, error: (e as Error).message });
+      throw e;
+    }
 
-  let res: Response;
-  try {
-    res = await fetch(config.url, {
-      method:  'POST',
-      headers: config.headers,
-      signal,
-      body: JSON.stringify({
+    let res: Response;
+    try {
+      res = await fetchWithPollinationsBackoff(provider, config, {
         model,
-        messages,
+        messages: applyHouseStyle(messages),
         stream: true,
         temperature,
         ...(maxTokens != null && { max_tokens: maxTokens }),
-      }),
-    });
+      }, signal);
   } catch (e) {
     if ((e as Error).name === 'AbortError') {
       recordCall({ task: 'stream', model, provider, ms: performance.now() - started, ok: true, chars: 0 });
@@ -200,6 +294,7 @@ export async function streamChat(opts: StreamOptions, handlers: StreamHandlers):
   handlers.onDone?.(full);
   recordCall({ task: 'stream', model, provider, ms: performance.now() - started, ok: true, chars: full.length });
   return full;
+  });
 }
 
 /**
@@ -246,12 +341,13 @@ export interface CompleteOptions extends Omit<StreamOptions, 'signal'> {
 }
 
 export async function completeChat(opts: CompleteOptions): Promise<string> {
-  const {
-    provider, model, apiKey, localBaseUrl, messages,
-    temperature = 0.2, maxTokens, jsonMode = false,
-    signal, timeoutMs = 300_000,
-  } = opts;
-  const started = performance.now();
+  return withAIMutex(async () => {
+    const {
+      provider, model, apiKey, localBaseUrl, messages,
+      temperature = 0.2, maxTokens, jsonMode = false,
+      signal, timeoutMs = 300_000,
+    } = opts;
+    const started = performance.now();
 
   const config = resolveProvider(provider, apiKey, localBaseUrl);
 
@@ -268,19 +364,14 @@ export async function completeChat(opts: CompleteOptions): Promise<string> {
   let res: Response;
   try {
     const body: Record<string, unknown> = {
-      model, messages,
+      model, messages: applyHouseStyle(messages),
       stream: false,
       temperature,
     };
     if (maxTokens != null) body.max_tokens = maxTokens;
     if (jsonMode) body.response_format = { type: 'json_object' };
 
-    res = await fetch(config.url, {
-      method:  'POST',
-      headers: config.headers,
-      signal:  ctrl.signal,
-      body:    JSON.stringify(body),
-    });
+    res = await fetchWithPollinationsBackoff(provider, config, body, ctrl.signal);
   } catch (e) {
     clearTimeout(innerTimer);
     signal?.removeEventListener('abort', onParentAbort);
@@ -305,6 +396,7 @@ export async function completeChat(opts: CompleteOptions): Promise<string> {
     chars: content.length,
   });
   return content;
+  });
 }
 
 function extractFullContent(json: unknown): string {

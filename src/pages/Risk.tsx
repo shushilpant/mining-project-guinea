@@ -19,8 +19,7 @@ import { AnomalyScanPanel } from '@/components/shared/AnomalyScanPanel';
 import { ArrowLeft, Search, SlidersHorizontal, Map, AlertOctagon } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { RiskSeverity, RiskFlagStatus } from '@/data/types';
-
-const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+import { SEVERITY_ORDER } from '@/lib/statusStyles';
 
 const SEVERITY_DOT: Record<string, string> = {
   critical: '#DC2626',
@@ -100,12 +99,10 @@ export function RiskPage() {
       {/* Configurable thresholds */}
       {showThresholds && (
         <div
-          className="rounded mb-4 p-4"
-          style={{ background: 'white', border: '1px solid #D2DACC', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+          className="rounded-xl mb-4 border border-line bg-surface p-4 shadow-card"
         >
           <div
-            className="text-[11px] font-bold uppercase tracking-widest mb-3"
-            style={{ color: '#4A6B58' }}
+            className="text-[11px] font-bold uppercase tracking-widest mb-3 text-ink-3"
           >
             Risk Detection Thresholds
           </div>
@@ -142,15 +139,13 @@ export function RiskPage() {
           <div className="mt-4 flex items-center justify-between">
             <button
               onClick={() => resetThresholds()}
-              className="text-[11px] hover:underline"
-              style={{ color: '#7A9A88' }}
+              className="text-[11px] text-ink-3 hover:text-ink hover:underline"
             >
               Reset to defaults
             </button>
             {isAdmin && (
               <span
-                className="text-[11px] px-2.5 py-1 rounded border font-medium"
-                style={{ color: '#006b3f', background: '#e8f5ee', borderColor: '#a4d4b6' }}
+                className="text-[11px] px-2.5 py-1 rounded border border-brand-200 bg-brand-50 font-medium text-brand-700"
               >
                 Changes applied system-wide
               </span>
@@ -266,8 +261,7 @@ export function RiskPage() {
       {/* Flag list */}
       {activeTab === 'flags' && (
       <div
-        className="bg-white rounded fade-in"
-        style={{ border: '1px solid #D2DACC', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+        className="bg-surface rounded-xl border border-line shadow-card overflow-hidden fade-in"
       >
         {/* Filter bar */}
         <div className="p-4 flex flex-wrap gap-3 items-center border-b border-line-soft bg-surface-2">
@@ -418,8 +412,7 @@ export function RiskFlagDetailPage() {
 
       {/* Flag header card */}
       <div
-        className="bg-white rounded p-5 mb-4"
-        style={{ border: '1px solid #D2DACC', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+        className="bg-surface rounded-xl border border-line shadow-card p-5 mb-4"
         data-ai-entity={`risk:${flag.id}`}
         data-ai-label={`${flag.id} — ${flag.category}`}
         data-ai-sub={`${flag.severity.toUpperCase()} · ${operator?.name ?? flag.operatorId}`}
@@ -431,9 +424,8 @@ export function RiskFlagDetailPage() {
           <div>
             <div
               className="flex items-center gap-2 text-[11px] mb-0.5"
-              style={{ color: '#8FA88A' }}
             >
-              <span className="font-bold uppercase tracking-wide">{flag.category}</span>
+              <span className="font-bold uppercase tracking-wide text-ink-3">{flag.category}</span>
               <span>·</span>
               <StatusDropdown
                 type="risk-flag"
@@ -441,7 +433,7 @@ export function RiskFlagDetailPage() {
                 onChange={val => mutationService.updateRiskFlagStatus(flag.id, val as RiskFlagStatus)}
               />
             </div>
-            <h1 className="text-[15px] font-semibold leading-snug" style={{ color: '#012C1D' }}>
+            <h1 className="text-[15px] font-semibold leading-snug text-ink">
               {flag.description}
             </h1>
           </div>
@@ -452,11 +444,10 @@ export function RiskFlagDetailPage() {
 
         {/* Recommended action */}
         <div
-          className="mt-3 rounded p-3 text-[13px]"
-          style={{ background: '#F0F8F4', border: '1px solid #B5E0D0' }}
+          className="mt-3 rounded-lg border border-brand-200 bg-brand-50 p-3 text-[13px]"
         >
-          <span className="font-semibold" style={{ color: '#012C1D' }}>Recommended action: </span>
-          <span style={{ color: '#2D5240' }}>{flag.recommendedAction}</span>
+          <span className="font-semibold text-ink">Recommended action: </span>
+          <span className="text-ink-2">{flag.recommendedAction}</span>
         </div>
       </div>
 
@@ -464,25 +455,22 @@ export function RiskFlagDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {operator && (
           <div
-            className="bg-white rounded p-4"
-            style={{ border: '1px solid #D2DACC', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+            className="bg-surface rounded-xl border border-line shadow-card p-4"
           >
             <div
-              className="text-[10px] font-bold uppercase tracking-widest mb-1"
-              style={{ color: '#8FA88A' }}
+              className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-4"
             >
               Operator
             </div>
-            <div className="text-[13px] font-semibold mb-1" style={{ color: '#012C1D' }}>
+            <div className="text-[13px] font-semibold mb-1 text-ink">
               {operator.name}
             </div>
-            <div className="text-[12px] mb-3" style={{ color: '#7A9A88' }}>
+            <div className="text-[12px] mb-3 text-ink-3">
               {operator.parentCompany} · {operator.countryOfRegistration}
             </div>
             <button
               onClick={() => navigate(`/performance/${operator.id}`)}
-              className="text-[12px] font-semibold hover:underline"
-              style={{ color: '#006b3f' }}
+              className="text-[12px] font-semibold text-brand-600 hover:underline"
             >
               View operator scorecard →
             </button>
@@ -491,28 +479,25 @@ export function RiskFlagDetailPage() {
 
         {agreement && (
           <div
-            className="bg-white rounded p-4"
-            style={{ border: '1px solid #D2DACC', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+            className="bg-surface rounded-xl border border-line shadow-card p-4"
           >
             <div
-              className="text-[10px] font-bold uppercase tracking-widest mb-1"
-              style={{ color: '#8FA88A' }}
+              className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-4"
             >
               Agreement
             </div>
-            <div className="text-[13px] font-semibold mb-1" style={{ color: '#012C1D' }}>
+            <div className="text-[13px] font-semibold mb-1 text-ink">
               {agreement.id}
             </div>
-            <div className="text-[12px] mb-1" style={{ color: '#7A9A88' }}>
+            <div className="text-[12px] mb-1 text-ink-3">
               {agreement.concesssionArea}
             </div>
-            <div className="text-[12px] mb-3" style={{ color: '#7A9A88' }}>
+            <div className="text-[12px] mb-3 text-ink-3">
               {agreement.royaltyRate}% royalty · {agreement.commodity}
             </div>
             <button
               onClick={() => navigate(`/agreements/${agreement.id}`)}
-              className="text-[12px] font-semibold hover:underline"
-              style={{ color: '#006b3f' }}
+              className="text-[12px] font-semibold text-brand-600 hover:underline"
             >
               View agreement detail →
             </button>
@@ -521,19 +506,17 @@ export function RiskFlagDetailPage() {
 
         {commitment && (
           <div
-            className="bg-white rounded p-4"
-            style={{ border: '1px solid #D2DACC', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+            className="bg-surface rounded-xl border border-line shadow-card p-4"
           >
             <div
-              className="text-[10px] font-bold uppercase tracking-widest mb-1"
-              style={{ color: '#8FA88A' }}
+              className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-4"
             >
               Commitment
             </div>
-            <div className="text-[13px] font-medium mb-2 leading-snug" style={{ color: '#012C1D' }}>
+            <div className="text-[13px] font-medium mb-2 leading-snug text-ink">
               {commitment.description}
             </div>
-            <div className="text-[12px] mb-1" style={{ color: '#7A9A88' }}>
+            <div className="text-[12px] mb-1 text-ink-3">
               Target: {commitment.targetValue.toLocaleString()} {commitment.targetUnit}
             </div>
             <div className="mt-2">
@@ -544,8 +527,7 @@ export function RiskFlagDetailPage() {
       </div>
 
       <div
-        className="mt-4 text-[11px] rounded px-4 py-3"
-        style={{ background: '#F5F8F2', border: '1px solid #D2DACC', color: '#7A9A88' }}
+        className="mt-4 rounded-lg border border-line bg-surface-2 px-4 py-3 text-[11px] text-ink-3"
       >
         Flag ID: <span className="font-mono">{flag.id}</span> · Triggered:{' '}
         {formatDate(flag.triggeredDate)} · Generated by the automated risk detection engine. The
@@ -575,8 +557,8 @@ function ThresholdSlider({
   return (
     <div>
       <div className="flex justify-between text-[12px] mb-1">
-        <span className="font-medium" style={{ color: '#2D5240' }}>{label}</span>
-        <span className="font-bold tabular-nums" style={{ color: '#012C1D' }}>{value}</span>
+        <span className="font-medium text-ink-2">{label}</span>
+        <span className="font-bold tabular-nums text-ink">{value}</span>
       </div>
       <input
         type="range"
@@ -585,9 +567,9 @@ function ThresholdSlider({
         value={value}
         onChange={e => onChange(Number(e.target.value))}
         className="w-full"
-        style={{ accentColor: '#006b3f' }}
+        style={{ accentColor: 'var(--primary)' }}
       />
-      <div className="text-[11px] mt-0.5 leading-tight" style={{ color: '#8FA88A' }}>
+      <div className="text-[11px] mt-0.5 leading-tight text-ink-4">
         {description}
       </div>
     </div>

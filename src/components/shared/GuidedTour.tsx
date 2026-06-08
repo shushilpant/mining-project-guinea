@@ -34,8 +34,8 @@ const STEPS: Step[] = [
   },
   {
     icon: Globe2,
-    title: 'Choose what you’re looking at',
-    body: 'Use the country selector in the top bar to focus on one country or the whole region. Every number, chart, and alert updates to match your choice.',
+    title: 'Built for Guinea',
+    body: 'This platform is dedicated to the Republic of Guinea. Every number, chart, map pin, and alert reflects Guinea’s mining agreements, operators, and compliance — there is no country switching.',
   },
   {
     icon: Sparkles,

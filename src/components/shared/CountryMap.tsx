@@ -3,10 +3,10 @@ import { MapContainer, TileLayer, CircleMarker, Circle, Popup, useMap } from 're
 import 'leaflet/dist/leaflet.css';
 import {
   getAgreements, getOperatorById, getCommitments,
-  getProtectedZones, getConcessionConflicts, getInfrastructureObligations,
-  getAgreementById,
+  getProtectedZones, getConcessionConflicts,
 } from '@/services/dataService';
-import type { ComplianceStatus, ProtectedZone, ConcessionConflict, InfrastructureProjectType } from '@/data/types';
+import type { ComplianceStatus, ProtectedZone, ConcessionConflict } from '@/data/types';
+import { COMPLIANCE_COLOR as STATUS_COLORS } from '@/lib/statusStyles';
 
 function effectiveAgreementStatus(agreementId: string): ComplianceStatus {
   const commitments = getCommitments(agreementId);
@@ -17,31 +17,14 @@ function effectiveAgreementStatus(agreementId: string): ComplianceStatus {
   return 'on-track';
 }
 
-const STATUS_COLORS: Record<ComplianceStatus, string> = {
-  'met': '#10b981',
-  'on-track': '#3b82f6',
-  'at-risk': '#f59e0b',
-  'breached': '#ef4444',
-};
-
-const INFRA_META: Record<InfrastructureProjectType, { color: string; label: string }> = {
-  rail:               { color: '#8B5CF6', label: 'Railway' },
-  port:               { color: '#0EA5E9', label: 'Port' },
-  road:               { color: '#F59E0B', label: 'Road' },
-  power:              { color: '#EAB308', label: 'Power' },
-  'processing-plant': { color: '#EC4899', label: 'Processing plant' },
-  dam:                { color: '#14B8A6', label: 'Dam' },
-  school:             { color: '#64748B', label: 'School' },
-  hospital:           { color: '#64748B', label: 'Hospital' },
-};
-
 const CENTER_BY_COUNTRY: Record<string, [number, number]> = {
   GIN: [10.5, -11.5],
-  GHA: [7.5, -1.5],
-  CIV: [7.0, -5.5],
 };
 
-const ZOOM_BY_COUNTRY: Record<string, number> = { GIN: 6, GHA: 6, CIV: 6 };
+const ZOOM_BY_COUNTRY: Record<string, number> = { GIN: 6 };
+
+// Guinea-only deployment — every scope resolves to Guinea.
+const GUINEA_CENTER: [number, number] = [10.5, -11.5];
 
 interface Props {
   countryId?: string;
@@ -54,7 +37,6 @@ interface LayerState {
   mines: boolean;
   concessions: boolean;
   zones: boolean;
-  infrastructure: boolean;
 }
 
 // Inner layer renderer — lives inside MapContainer so it can use the map
@@ -64,7 +46,6 @@ function MapLayers({
 }: { countryId?: string; layers: LayerState; protectedZones: ProtectedZone[]; conflicts: ConcessionConflict[] }) {
   const map = useMap();
   const agreements = getAgreements(countryId).filter(a => a.status === 'active' && a.coordinates);
-  const infra = getInfrastructureObligations(countryId);
 
   return (
     <>
@@ -75,8 +56,8 @@ function MapLayers({
           <Circle
             key={`con-${a.id}`}
             center={a.coordinates}
-            radius={16000}
-            pathOptions={{ color, fillColor: color, fillOpacity: 0.06, weight: 1, dashArray: '2 5' }}
+            radius={22000}
+            pathOptions={{ color, fillColor: color, fillOpacity: 0.12, weight: 2, dashArray: '4 6' }}
           />
         );
       })}
@@ -91,10 +72,10 @@ function MapLayers({
             radius={zone.radiusKm * 1000}
             pathOptions={{
               fillColor: isConflict ? '#DC2626' : '#10b981',
-              fillOpacity: 0.15,
+              fillOpacity: 0.24,
               color: isConflict ? '#DC2626' : '#10b981',
-              weight: isConflict ? 2 : 1,
-              dashArray: isConflict ? '4 4' : undefined,
+              weight: isConflict ? 3.5 : 2.5,
+              dashArray: isConflict ? '5 4' : undefined,
             }}
           >
             <Popup>
@@ -109,29 +90,6 @@ function MapLayers({
         );
       })}
 
-      {/* Infrastructure markers */}
-      {layers.infrastructure && infra.map(io => {
-        const ag = getAgreementById(io.agreementId);
-        if (!ag?.coordinates) return null;
-        const meta = INFRA_META[io.projectType];
-        return (
-          <CircleMarker
-            key={io.id}
-            center={ag.coordinates}
-            radius={6}
-            pathOptions={{ fillColor: 'transparent', color: meta.color, weight: 3, fillOpacity: 0 }}
-          >
-            <Popup>
-              <div className="text-xs leading-relaxed min-w-[170px]">
-                <div className="font-semibold text-ink mb-1">{io.projectName}</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-ink-3 mb-1">{meta.label}</div>
-                <div className="text-ink-4">{io.actualProgress}% complete · {io.status.replace('-', ' ')}</div>
-              </div>
-            </Popup>
-          </CircleMarker>
-        );
-      })}
-
       {/* Mine / operator markers */}
       {layers.mines && agreements.map(agreement => {
         const operator = getOperatorById(agreement.operatorId);
@@ -143,7 +101,19 @@ function MapLayers({
             center={agreement.coordinates}
             radius={8}
             pathOptions={{ fillColor: color, fillOpacity: 0.85, color: '#fff', weight: 1.5 }}
-            eventHandlers={{ click: () => map.flyTo(agreement.coordinates, Math.max(map.getZoom(), 8), { duration: 0.6 }) }}
+            eventHandlers={{
+              click: () => map.flyTo(agreement.coordinates, Math.max(map.getZoom(), 8), { duration: 0.6 }),
+              // Tag the marker's SVG path so a right-click on THIS dot resolves to
+              // its specific agreement — the "Explain with AI" menu then briefs on
+              // this exact mine, not the whole map.
+              add: (e) => {
+                const el = (e.target as { getElement?: () => SVGElement | null }).getElement?.();
+                if (!el) return;
+                el.setAttribute('data-ai-entity', `agreement:${agreement.id}`);
+                if (operator?.name) el.setAttribute('data-ai-label', operator.name);
+                el.setAttribute('data-ai-sub', `${agreement.commodity} · ${agreement.concesssionArea}`);
+              },
+            }}
           >
             <Popup>
               <div className="text-xs leading-relaxed min-w-[160px]">
@@ -166,17 +136,16 @@ const LAYER_TOGGLES: { key: keyof LayerState; label: string }[] = [
   { key: 'mines', label: 'Mines' },
   { key: 'concessions', label: 'Concessions' },
   { key: 'zones', label: 'Protected Zones' },
-  { key: 'infrastructure', label: 'Infrastructure' },
 ];
 
 export function CountryMap({ countryId, protectedZones, conflicts }: Props) {
-  const [layers, setLayers] = useState<LayerState>({ mines: true, concessions: false, zones: true, infrastructure: true });
+  const [layers, setLayers] = useState<LayerState>({ mines: true, concessions: false, zones: true });
 
   const zones = protectedZones ?? getProtectedZones(countryId);
   const conflictList = conflicts ?? getConcessionConflicts(countryId);
 
-  const center: [number, number] = countryId && countryId !== 'ALL' ? CENTER_BY_COUNTRY[countryId] ?? [8.0, -6.0] : [8.0, -7.0];
-  const zoom = countryId && countryId !== 'ALL' ? ZOOM_BY_COUNTRY[countryId] ?? 6 : 5;
+  const center: [number, number] = (countryId && countryId !== 'ALL' && CENTER_BY_COUNTRY[countryId]) || GUINEA_CENTER;
+  const zoom = (countryId && countryId !== 'ALL' && ZOOM_BY_COUNTRY[countryId]) || 6;
 
   const toggle = (key: keyof LayerState) => setLayers(s => ({ ...s, [key]: !s[key] }));
 
@@ -209,7 +178,6 @@ export function CountryMap({ countryId, protectedZones, conflicts }: Props) {
           ))}
         </div>
         <div className="mt-1.5 pt-1.5 border-t border-line-soft flex items-center gap-3">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: '#8B5CF6' }} aria-hidden /><span className="text-[10px] text-ink-3">Infra</span></span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(220,38,38,0.3)', border: '1px solid #DC2626' }} aria-hidden /><span className="text-[10px] text-ink-3">Conflict</span></span>
         </div>
       </div>

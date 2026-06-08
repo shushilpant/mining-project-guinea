@@ -34,7 +34,7 @@ import {
   getRoyaltyBenchmarks,
   daysUntilExpiry,
 } from '@/services/dataService';
-import { fenceUserText } from '@/services/aiService';
+import { fenceUserText, type ChatMessage } from '@/services/aiService';
 import {
   COMMODITY_META,
   commoditiesInScope,
@@ -45,13 +45,12 @@ import {
   type ScenarioInput,
   type RevenueProjection,
 } from '@/lib/revenueModel';
+import { MODULES, GLOSSARY } from '@/content/guide';
 import type { Commodity } from '@/data/types';
 
 const COUNTRY_LABEL: Record<string, string> = {
-  ALL: 'West Africa region (Guinea, Ghana, Côte d\'Ivoire combined)',
+  ALL: 'Republic of Guinea',
   GIN: 'Republic of Guinea',
-  GHA: 'Republic of Ghana',
-  CIV: 'Republic of Côte d\'Ivoire',
 };
 
 const SEV_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -598,6 +597,88 @@ export function buildScenarioContext(
 // importing aiService directly.
 export { fenceUserText };
 
+// ─── Scope gate ──────────────────────────────────────────────
+// Small open-weight models won't reliably self-refuse from a system-prompt
+// rule (and making the rule forceful made them echo it). So scope is enforced
+// deterministically in the client: a tiny pre-flight classifier call labels the
+// question IN/OUT, and we emit this exact refusal ourselves for OUT — the main
+// answering model never sees any scope text, so nothing can leak.
+
+export const OUT_OF_SCOPE_REPLY =
+  'This request falls outside my operational scope. I am designed exclusively to analyse and advise on the mining compliance data provided within this dashboard.';
+
+export interface ScopeClassifierContext {
+  priorTurns?: { role: 'user' | 'assistant'; content: string }[];
+  anchorLabel?: string;
+}
+
+/** Messages for the binary scope classifier. One simple task → far more
+ *  reliable than an in-context refusal buried in a large system prompt. */
+export function scopeClassifierMessages(
+  question: string,
+  ctx?: ScopeClassifierContext,
+): ChatMessage[] {
+  const contextLines: string[] = [];
+  if (ctx?.anchorLabel?.trim()) {
+    contextLines.push(`ANCHOR RECORD: ${ctx.anchorLabel.trim()}`);
+  }
+  const recent = (ctx?.priorTurns ?? []).slice(-4);
+  if (recent.length > 0) {
+    contextLines.push('RECENT CONVERSATION:');
+    for (const t of recent) {
+      const label = t.role === 'user' ? 'User' : 'Assistant';
+      const excerpt = t.content.trim().slice(0, 400);
+      contextLines.push(`${label}: ${excerpt}`);
+    }
+  }
+
+  const userBlock = [
+    contextLines.length > 0 ? contextLines.join('\n') : '',
+    contextLines.length > 0 ? '' : '',
+    'USER QUESTION:',
+    fenceUserText(question),
+  ].filter((line, i, arr) => line !== '' || i < arr.length - 1).join('\n');
+
+  return [
+    {
+      role: 'system',
+      content: [
+        'You are a topic classifier guarding an AI assistant for the ACCI',
+        'mining-compliance dashboard (Republic of Guinea mining sector).',
+        'Classify the USER QUESTION. Default to OUT unless there is a plausible',
+        'connection to mining, extractives governance, or this dashboard.',
+        'IN  = using or reading this dashboard (modules, map, markers, charts,',
+        '      tables) OR any mining / extractives-governance topic (agreements,',
+        '      concessions, licences, royalties, commitments, risk flags, operators,',
+        '      ownership, local content, EITI, transparency, ESG, regulation, fiscal',
+        '      / revenue modelling). Definitional questions in that domain are IN.',
+        '      ALSO IN: greetings, acknowledgements, and short follow-ups that clearly',
+        '      continue RECENT CONVERSATION or the ANCHOR RECORD (e.g. "why?",',
+        '      "explain that", "compare those two", "and the second one?").',
+        'OUT = general knowledge, science trivia, sport, entertainment, cooking,',
+        '      celebrities, creative writing, jokes, or anything with no connection',
+        '      to mining or this tool (e.g. "how big is the sun", "capital of France").',
+        '      A mid-conversation pivot to unrelated trivia is OUT even if prior turns',
+        '      were about mining.',
+        'Answer with exactly one word: IN or OUT. No punctuation, no explanation.',
+      ].join('\n'),
+    },
+    { role: 'user', content: userBlock },
+  ];
+}
+
+/** Parse the classifier verdict. Empty/garbled output fails closed on cold
+ *  questions; in an established thread, ambiguous output fails open. */
+export function isOutOfScopeVerdict(raw: string, establishedThread = false): boolean {
+  const trimmed = (raw ?? '').trim();
+  if (!trimmed) return !establishedThread;
+  if (/\bOUT\b/i.test(trimmed) && !/\bIN\b/i.test(trimmed.replace(/\bOUT\b/gi, ''))) {
+    return true;
+  }
+  if (/\bIN\b/i.test(trimmed)) return false;
+  return !establishedThread;
+}
+
 /**
  * The system prompt is intentionally strict: the model is told to ground every
  * claim in the supplied briefing pack and to admit uncertainty rather than
@@ -606,14 +687,16 @@ export { fenceUserText };
 export function buildSystemPrompt(countryLabel: string): string {
   return [
     'You are the ACCI Compliance Analyst — an AI assistant embedded in a',
-    'government compliance-intelligence system used by Ministries of Mining',
-    'in Guinea, Ghana, and Côte d\'Ivoire (programme PEB-0526-WA-MIN-05).',
+    'government compliance-intelligence system used by the Ministry of Mines',
+    'of the Republic of Guinea (programme PEB-0526-GIN-MIN-05).',
     '',
     `The user is currently viewing: ${countryLabel}.`,
     '',
-    'You will receive a BRIEFING PACK containing the live data the user is',
-    'looking at. Ground every answer in that pack. Cite operator names, ',
-    'agreement IDs (AGR-…), and risk-flag IDs when you reference them.',
+    'You will receive a DASHBOARD PRIMER (what the platform, its modules, map',
+    'markers and domain terms mean) and a BRIEFING PACK (the live data the user',
+    'is looking at). Ground data/figures in the pack; use the primer to explain',
+    'concepts, the interface, and terminology. Cite operator names, agreement',
+    'IDs (AGR-…), and risk-flag IDs when you reference specific records.',
     '',
     'House rules:',
     '• Be concise and structured. Use short Markdown — bullet lists, bold',
@@ -625,8 +708,56 @@ export function buildSystemPrompt(countryLabel: string): string {
     '  3–5 things that warrant ministerial attention this week, with the',
     '  recommended action for each.',
     '• Distinguish facts present in the pack from your interpretation.',
-    '• If the user asks about anything outside the scope of this compliance dashboard or irrelevant to the provided data, politely reply that it is "This request falls outside my operational scope. I am designed exclusively to analyse and advise on the mining compliance data provided within this dashboard." and decline to answer.',
     '• Always use British English spellings and conventions (e.g., categorise, colour, licence as noun).',
     '• Do not end your responses with conversational fillers, offers of further assistance, or follow-up questions (e.g., "Is there anything else?", "Would you like to know more?"). Just provide the answer and stop.',
+  ].join('\n');
+}
+
+/**
+ * Reference primer describing what the PLATFORM itself is — every module, the
+ * meaning of every map marker, and the full domain glossary — compiled from the
+ * single source of truth in `content/guide.ts`. The BRIEFING PACK carries live
+ * data records; this carries the vocabulary and interface semantics needed to
+ * answer "what are concessions?", "what do the markers mean?", and any other
+ * question about how to read the dashboard. Keep it factual and self-contained.
+ */
+export function buildDomainPrimer(): string {
+  const moduleLines = Object.values(MODULES).map((m) => {
+    const code = m.moduleCode ? `${m.moduleCode} ` : '';
+    return `- ${code}${m.plainName} (${m.official}, route ${m.route}): ${m.tagline}`;
+  });
+
+  const glossaryLines = Object.values(GLOSSARY).map((g) => `- ${g.term}: ${g.definition}`);
+
+  return [
+    'DASHBOARD PRIMER — reference for what this platform is and what its',
+    'interface shows. Use it to explain concepts, terminology and visuals.',
+    'It is background knowledge, not live data; for figures use the BRIEFING PACK.',
+    '',
+    'PLATFORM: ACCI — Adaptive Continuous Compliance Intelligence, a government',
+    'mining-compliance platform for the Ministry of Mines of the Republic of',
+    'Guinea (GIN) (programme PEB-0526).',
+    '',
+    'MODULES (left-nav sections, each is a page of the dashboard):',
+    ...moduleLines,
+    '',
+    'THE OVERVIEW MAP ("Operator & Mine Locations"). It is a Leaflet map of the',
+    'selected country/region with toggleable layers (top-right) and a legend',
+    '(bottom-left). What each marker means:',
+    '- Mine / operator pin: a solid coloured dot marking one mine (one active',
+    '  agreement). Its colour is the operator’s compliance status — green = met,',
+    '  blue = on-track, amber = at-risk, red = breached. Click a pin to zoom and',
+    '  see the operator, concession area, commodity and royalty.',
+    '- Concession (dashed circle around a pin): the licensed area a company may',
+    '  mine, coloured by the same compliance status. The "Concessions" layer is',
+    '  off by default — toggle it on to show these.',
+    '- Protected zone (filled circle): an environmentally or legally protected',
+    '  area (e.g. national park, water reserve) that mining should not encroach',
+    '  on. Green normally; red and dashed when a concession overlaps it — a',
+    '  "concession conflict" (shown as "Conflict" in the legend).',
+    '- Layer toggles: Mines, Concessions, Protected Zones.',
+    '',
+    'GLOSSARY (plain-language definitions of the terms used across the app):',
+    ...glossaryLines,
   ].join('\n');
 }

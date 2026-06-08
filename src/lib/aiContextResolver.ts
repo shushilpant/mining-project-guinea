@@ -68,6 +68,10 @@ export interface ContextHit {
   /** Snippet of text grabbed from near the click — used by the generic
    *  "Explain this" briefing when no entity was tagged. */
   fallbackText?: string;
+  /** The single data point the user pin-pointed — e.g. the active tooltip on a
+   *  chart series/value, or an open map-feature popup. When present, the brief
+   *  explains THIS value rather than the whole chart / section. */
+  precisePoint?: string;
   /** The DOM target that owned the click — used by the popover to anchor
    *  any later highlight or scroll-into-view follow-ups. */
   targetRect: DOMRect | null;
@@ -123,15 +127,26 @@ export function resolveContextAt(
   // Anchor for later UI affordances (popover scroll, citation highlight).
   hit.targetRect = (target as Element).getBoundingClientRect();
 
-  // Fallback text: only used when no entity was found. We grab the nearest
-  // card / row / section text content so even untagged regions can be
-  // explained. Cap aggressively so we don't ship huge slabs to the model.
-  if (!hit.entity && !hit.selectedText) {
+  // Precise data-point capture: when the click lands on a specific mark inside a
+  // chart or map, identify the exact value/feature the user pin-pointed so the
+  // brief can explain THAT point, not the whole chart.
+  if (!hit.selectedText) {
+    hit.precisePoint = capturePrecisePoint(target as Element);
+  }
+
+  // Capture the nearest block's text so the "Explain this section" briefing can
+  // be grounded in the exact content the user right-clicked, not just the
+  // section name. Skip only when there's an explicit selection — that takes
+  // priority as the focus content. Cap aggressively so we don't ship huge slabs.
+  if (!hit.selectedText) {
     const block = findEnclosingBlock(target as Element);
-    if (block) {
-      const txt = block.innerText?.trim().replace(/\s+/g, ' ');
-      if (txt) hit.fallbackText = txt.slice(0, 600);
+    let txt = block?.innerText?.trim().replace(/\s+/g, ' ') ?? '';
+    // Icon-only / empty-text elements: fall back to their accessible label.
+    if (!txt && target instanceof HTMLElement) {
+      txt = (target.getAttribute('aria-label') || target.getAttribute('title') || target.textContent || '')
+        .trim().replace(/\s+/g, ' ');
     }
+    if (txt) hit.fallbackText = txt.slice(0, 600);
   }
 
   return hit;
@@ -181,6 +196,32 @@ function inferSub(kind: EntityKind, id: string): string | null {
   }
 }
 
+// Identify the single data point under the cursor. Charts and maps render their
+// per-point detail in a live tooltip / popup keyed to whatever the user is
+// hovering, so reading that gives the exact value pin-pointed — far more
+// specific than the chart's whole text. Returns undefined when the click is not
+// on an interactive mark (the caller then falls back to the block text).
+function capturePrecisePoint(target: Element): string | undefined {
+  // Recharts — the active tooltip mirrors the hovered datapoint (axis label +
+  // each series value). innerText excludes the wrapper when it's not visible,
+  // so an inactive chart yields nothing and we fall back to the section.
+  const chart = target.closest('.recharts-wrapper');
+  if (chart) {
+    const tip = chart.querySelector<HTMLElement>('.recharts-tooltip-wrapper');
+    const txt = tip?.innerText?.trim().replace(/\s+/g, ' ');
+    if (txt) return txt.slice(0, 300);
+  }
+
+  // Leaflet — an open feature popup is the specific marker the user opened.
+  if (target.closest('.leaflet-container')) {
+    const popup = document.querySelector<HTMLElement>('.leaflet-popup-content');
+    const txt = popup?.innerText?.trim().replace(/\s+/g, ' ');
+    if (txt) return txt.slice(0, 300);
+  }
+
+  return undefined;
+}
+
 function findEnclosingBlock(el: Element): HTMLElement | null {
   let cur: Element | null = el;
   for (let i = 0; i < 12 && cur; i++) {
@@ -205,50 +246,73 @@ function findEnclosingBlock(el: Element): HTMLElement | null {
 
 // ─── Hit → briefing options ──────────────────────────────────
 
-const DEFAULT_REGION_PROMPT = (regionName: string, pageRoute: string, country: string, pack: string) => ([
-  {
-    role: 'system' as const,
-    content: [
-      'You are the ACCI Compliance Analyst. Produce a tight read on a',
-      'specific section of the dashboard the user has just right-clicked.',
-      'Ground every claim in the BRIEFING PACK. Cite operator, agreement,',
-      'flag and commitment IDs in brackets, e.g. [OP-06], [AGR-014].',
-      '',
-      `Section: ${regionName}.`,
-      `Page route: ${pageRoute}.`,
-      `Country scope: ${country}.`,
-      '',
-      'Output: 3–5 short bullets, ≤ 28 words each. No preamble, no headings,',
-      'no closing sentence. If the pack lacks data for this section, say so',
-      'plainly in one bullet rather than guess.',
-    ].join('\n'),
-  },
-  { role: 'system' as const, content: `BRIEFING PACK:\n\n${pack}` },
-  { role: 'user' as const,   content: `Brief me on what this section ("${regionName}") is showing.` },
-]);
+// Section briefing prompt. The user right-clicks (optionally after selecting
+// text) inside a section of the dashboard; we explain that section, grounded in
+// the exact content they targeted — the highlighted selection if there is one,
+// otherwise the text of the block they clicked. This lets a single "Explain
+// this section" option explain whatever the user actually pointed at.
+type FocusKind = 'selection' | 'point' | 'block';
 
-const EXPLAIN_TEXT_PROMPT = (snippet: string, isSelection: boolean, country: string, pack: string) => ([
-  {
-    role: 'system' as const,
-    content: [
-      'You are the ACCI Compliance Analyst. The user has right-clicked an',
-      `${isSelection ? 'explicitly highlighted selection' : 'unspecified element'} on the dashboard.`,
-      'Explain what the snippet refers to in context of the current data,',
-      'and what it implies. Ground in the BRIEFING PACK; cite IDs in',
-      'brackets if you reference operators / agreements / flags / commitments.',
-      '',
-      `Country scope: ${country}.`,
-      '',
-      'Output: ≤ 100 words of plain prose. If you cannot identify the',
-      'reference, say "this snippet does not map to a known record" plainly.',
-    ].join('\n'),
-  },
-  { role: 'system' as const, content: `BRIEFING PACK:\n\n${pack}` },
-  {
-    role: 'user' as const,
-    content: `${isSelection ? 'Explain the selected text:' : 'Explain this element:'}\n${fenceUserText(snippet)}`,
-  },
-]);
+const SECTION_PROMPT = (args: {
+  regionName: string;
+  pageRoute: string;
+  country: string;
+  pack: string;
+  focusText?: string;
+  focusKind?: FocusKind;
+}) => {
+  const { regionName, pageRoute, country, pack, focusText, focusKind = 'block' } = args;
+  const isPoint = focusKind === 'point';
+  const isSelection = focusKind === 'selection';
+  const verb = isSelection ? 'highlighted' : isPoint ? 'pin-pointed' : 'clicked';
+
+  const systemLines = isPoint
+    ? [
+        'You are the ACCI Compliance Analyst. The user has pin-pointed a SINGLE',
+        'data point on a chart / map (its value is quoted in the user message).',
+        'Explain ONLY that point — what it represents (its series, category, period',
+        'or feature and its value), why it sits where it does, and what it implies',
+        'for the Ministry. Do NOT summarise the whole chart or section. Ground every',
+        'claim in the BRIEFING PACK and cite operator / agreement / flag IDs in',
+        'brackets, e.g. [OP-06], [AGR-014].',
+        '',
+        `Chart / section: ${regionName}.`,
+        `Page route: ${pageRoute}.`,
+        `Country scope: ${country}.`,
+        '',
+        'Output: 2–4 short bullets, ≤ 26 words each, all about this one point. No',
+        'preamble, no headings, no closing sentence. If the pack lacks data for',
+        'this point, say so plainly in one bullet rather than guess.',
+      ]
+    : [
+        'You are the ACCI Compliance Analyst. The user has right-clicked a',
+        'section of the dashboard and wants it explained. Explain what this',
+        `section is showing and what it implies for the Ministry, focusing on`,
+        `the specific content they ${verb} (quoted in the user message when`,
+        'present). Ground every claim in the BRIEFING PACK. Cite operator,',
+        'agreement, flag and commitment IDs in brackets, e.g. [OP-06], [AGR-014].',
+        '',
+        `Section: ${regionName}.`,
+        `Page route: ${pageRoute}.`,
+        `Country scope: ${country}.`,
+        '',
+        'Output: 3–5 short bullets, ≤ 28 words each. No preamble, no headings,',
+        'no closing sentence. If the pack lacks data for this section, say so',
+        'plainly in one bullet rather than guess.',
+      ];
+
+  const userContent = !focusText
+    ? `Brief me on what this section ("${regionName}") is showing.`
+    : isPoint
+      ? `Explain ONLY this specific data point I pin-pointed in "${regionName}" (not the whole chart):\n${fenceUserText(focusText)}`
+      : `Explain this section ("${regionName}"). I ${isSelection ? 'selected' : 'right-clicked'} this content:\n${fenceUserText(focusText)}`;
+
+  return [
+    { role: 'system' as const, content: systemLines.join('\n') },
+    { role: 'system' as const, content: `BRIEFING PACK:\n\n${pack}` },
+    { role: 'user' as const, content: userContent },
+  ];
+};
 
 const ASK_FREEFORM_PROMPT = (entityLabel: string, entityContext: string) => ([
   {
@@ -441,39 +505,36 @@ export function buildBriefingOptions(
     }
   }
 
-  // Section briefing — available whenever a region was tagged.
-  if (hit.region) {
+  // Section / point briefing — the single generic option. It explains whatever
+  // the user right-clicked, grounded in the most specific thing they targeted:
+  //   1. an explicit text selection, else
+  //   2. a pin-pointed data point (chart tooltip / map popup), else
+  //   3. the text of the enclosing block.
+  // A pin-pointed value is explained on its own ("this data point"); otherwise
+  // the whole section is explained. (Tagged entities get their richer options
+  // above instead.)
+  if (!hit.entity && (hit.region || hit.fallbackText || hit.selectedText || hit.precisePoint)) {
     const pack = buildContext({ countryId: country });
+    const focusKind: FocusKind = hit.selectedText ? 'selection' : hit.precisePoint ? 'point' : 'block';
+    const focusText = hit.selectedText ?? hit.precisePoint ?? hit.fallbackText;
+    const isPoint = focusKind === 'point';
+    const regionName = hit.region ? humaniseRegion(hit.region) : 'this section';
     opts.push({
-      id: `section:${hit.region}:${hit.pageRoute}`,
-      label: hit.entity ? 'AI: Brief this section' : 'AI: Brief this section',
-      hint: `Overview of "${hit.region}"`,
-      entityLabel: humaniseRegion(hit.region),
-      buildMessages: () => DEFAULT_REGION_PROMPT(hit.region!, hit.pageRoute, country, pack),
-    });
-  }
-
-  // Selected text → "Explain this selection"
-  if (hit.selectedText) {
-    const pack = buildContext({ countryId: country });
-    opts.push({
-      id: `explain-selection:${hash(hit.selectedText)}`,
-      label: 'AI: Explain selection',
-      hint: snippetPreview(hit.selectedText),
-      entityLabel: 'Selected text',
-      buildMessages: () => EXPLAIN_TEXT_PROMPT(hit.selectedText!, true, country, pack),
-    });
-  }
-
-  // Last resort: snippet from the enclosing block.
-  if (!hit.entity && !hit.region && !hit.selectedText && hit.fallbackText) {
-    const pack = buildContext({ countryId: country });
-    opts.push({
-      id: `explain-element:${hash(hit.fallbackText)}`,
-      label: 'AI: Explain this',
-      hint: snippetPreview(hit.fallbackText),
-      entityLabel: 'Element',
-      buildMessages: () => EXPLAIN_TEXT_PROMPT(hit.fallbackText!, false, country, pack),
+      id: `section:${focusKind}:${hit.region ?? 'block'}:${hit.pageRoute}:${hash(focusText ?? regionName)}`,
+      label: isPoint ? 'AI: Explain this data point' : 'AI: Explain this section',
+      hint: isPoint && focusText
+        ? `This point: ${snippetPreview(focusText)}`
+        : focusText ? snippetPreview(focusText) : `Overview of "${regionName}"`,
+      entityLabel: isPoint ? `${regionName} — selected point` : regionName,
+      buildMessages: () =>
+        SECTION_PROMPT({
+          regionName,
+          pageRoute: hit.pageRoute,
+          country,
+          pack,
+          focusText,
+          focusKind,
+        }),
     });
   }
 

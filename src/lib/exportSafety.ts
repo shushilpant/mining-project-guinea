@@ -1,4 +1,4 @@
-// Defenses for data leaving the app as spreadsheet files.
+// Defences for data leaving the app as spreadsheet files.
 //
 // CSV / formula injection (a.k.a. CIAJ): when a victim opens an exported
 // .xlsx/.csv, any cell whose text begins with = + - @ or a control char is

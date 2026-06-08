@@ -1017,19 +1017,19 @@ export const DOCUMENT_ACCESS_LOGS: DocumentAccessLog[] = [
 export const EITI_REPORT_SECTIONS: EITIReportSection[] = [
   // Guinea (GIN)
   { countryId: 'GIN', sectionNumber: '1.1', title: 'Legal Framework', status: 'complete', dataSource: 'Ministry of Mines', lastUpdated: '2024-05-01' },
-  { countryId: 'GIN', sectionNumber: '1.2', title: 'License Allocations', status: 'partial', dataSource: 'Cadastre', lastUpdated: '2024-05-15' },
+  { countryId: 'GIN', sectionNumber: '1.2', title: 'Licence Allocations', status: 'partial', dataSource: 'Cadastre', lastUpdated: '2024-05-15' },
   { countryId: 'GIN', sectionNumber: '2.5', title: 'Beneficial Ownership', status: 'missing', dataSource: 'Corporate Registry', lastUpdated: '2024-01-10' },
   { countryId: 'GIN', sectionNumber: '4.1', title: 'Revenue Collection', status: 'partial', dataSource: 'Treasury / DGI', lastUpdated: '2024-04-22' },
   { countryId: 'GIN', sectionNumber: '6.1', title: 'Social & Infrastructure Expenditure', status: 'complete', dataSource: 'Local Development Fund', lastUpdated: '2024-05-10' },
   // Ghana (GHA)
   { countryId: 'GHA', sectionNumber: '1.1', title: 'Legal Framework', status: 'complete', dataSource: 'Minerals Commission', lastUpdated: '2024-05-03' },
-  { countryId: 'GHA', sectionNumber: '1.2', title: 'License Allocations', status: 'complete', dataSource: 'Cadastre', lastUpdated: '2024-05-12' },
+  { countryId: 'GHA', sectionNumber: '1.2', title: 'Licence Allocations', status: 'complete', dataSource: 'Cadastre', lastUpdated: '2024-05-12' },
   { countryId: 'GHA', sectionNumber: '2.5', title: 'Beneficial Ownership', status: 'partial', dataSource: 'Registrar-General', lastUpdated: '2024-03-18' },
   { countryId: 'GHA', sectionNumber: '4.1', title: 'Revenue Collection', status: 'complete', dataSource: 'Ghana Revenue Authority', lastUpdated: '2024-05-20' },
   { countryId: 'GHA', sectionNumber: '6.1', title: 'Social & Infrastructure Expenditure', status: 'partial', dataSource: 'Mineral Development Fund', lastUpdated: '2024-04-30' },
   // Côte d'Ivoire (CIV)
   { countryId: 'CIV', sectionNumber: '1.1', title: 'Legal Framework', status: 'complete', dataSource: 'Ministère des Mines', lastUpdated: '2024-04-28' },
-  { countryId: 'CIV', sectionNumber: '1.2', title: 'License Allocations', status: 'partial', dataSource: 'Cadastre Minier', lastUpdated: '2024-05-08' },
+  { countryId: 'CIV', sectionNumber: '1.2', title: 'Licence Allocations', status: 'partial', dataSource: 'Cadastre Minier', lastUpdated: '2024-05-08' },
   { countryId: 'CIV', sectionNumber: '2.5', title: 'Beneficial Ownership', status: 'missing', dataSource: 'CEPICI', lastUpdated: '2023-11-15' },
   { countryId: 'CIV', sectionNumber: '4.1', title: 'Revenue Collection', status: 'partial', dataSource: 'DGI', lastUpdated: '2024-04-19' },
 ];
@@ -1437,31 +1437,114 @@ export interface SeedData {
   regulatoryImpacts: RegulatoryImpact[];
 }
 
+// This platform is a dedicated, Guinea-only deployment. The seed corpus still
+// carries records authored for the wider West Africa programme, so we scope the
+// dataset down to the Republic of Guinea (GIN) here — the single chokepoint that
+// every UI reads through (dataService → generateSeedData). Records are kept iff
+// they belong to Guinea directly (countryId) or chain to a Guinean operator /
+// agreement / regulation / dataset. Everything else is dropped.
+const GUINEA_ID = 'GIN';
+
 export function generateSeedData(): SeedData {
+  const countries = COUNTRIES.filter(c => c.id === GUINEA_ID);
+
+  // An operator may historically span several countries; keep only those active
+  // in Guinea and trim their country list so nothing leaks the other markets.
+  const operators = OPERATORS
+    .filter(op => op.countryIds.includes(GUINEA_ID))
+    .map(op => ({ ...op, countryIds: op.countryIds.filter(id => id === GUINEA_ID) }));
+  const operatorIds = new Set(operators.map(op => op.id));
+
+  const agreements = AGREEMENTS.filter(a => a.countryId === GUINEA_ID);
+  const agreementIds = new Set(agreements.map(a => a.id));
+
+  const commitments = COMMITMENTS.filter(c => agreementIds.has(c.agreementId));
+  const commitmentIds = new Set(commitments.map(c => c.id));
+
+  const performanceRecords = PERFORMANCE_RECORDS.filter(p => commitmentIds.has(p.commitmentId));
+
+  const riskFlags = RISK_FLAGS.filter(
+    r => operatorIds.has(r.operatorId) || agreementIds.has(r.agreementId),
+  );
+
+  const infrastructureObligations = INFRASTRUCTURE_OBLIGATIONS.filter(i => agreementIds.has(i.agreementId));
+
+  const beneficialOwnerTrees = BENEFICIAL_OWNER_TREES.filter(b => operatorIds.has(b.operatorId));
+
+  const protectedZones = PROTECTED_ZONES.filter(z => z.countryId === GUINEA_ID);
+  const zoneIds = new Set(protectedZones.map(z => z.id));
+
+  const concessionConflicts = CONCESSION_CONFLICTS.filter(
+    c => agreementIds.has(c.agreementId) && zoneIds.has(c.zoneId),
+  );
+
+  const localContentRecords = LOCAL_CONTENT_RECORDS.filter(
+    l => agreementIds.has(l.agreementId) || operatorIds.has(l.operatorId),
+  );
+
+  // Access logs without an agreement link are platform-wide; keep those plus any
+  // tied to a Guinean agreement.
+  const documentAccessLogs = DOCUMENT_ACCESS_LOGS.filter(
+    d => !d.agreementId || agreementIds.has(d.agreementId),
+  );
+
+  const eitiReportSections = EITI_REPORT_SECTIONS.filter(s => s.countryId === GUINEA_ID);
+
+  const esgMetrics = ESG_METRICS.filter(
+    e => operatorIds.has(e.operatorId) || agreementIds.has(e.agreementId),
+  );
+
+  const mineClosures = MINE_CLOSURES.filter(m => agreementIds.has(m.agreementId));
+
+  const managedDocuments = MANAGED_DOCUMENTS.filter(d => d.countryId === GUINEA_ID);
+
+  const publicDatasets = PUBLIC_DATASETS.filter(d => d.countryId === GUINEA_ID);
+  const datasetIds = new Set(publicDatasets.map(d => d.id));
+
+  const publicationLogs = PUBLICATION_LOGS.filter(p => datasetIds.has(p.datasetId));
+
+  const regulatoryChanges = REGULATORY_CHANGES.filter(r => r.countryId === GUINEA_ID);
+  const regulationIds = new Set(regulatoryChanges.map(r => r.id));
+
+  const regulatoryImpacts = REGULATORY_IMPACTS.filter(
+    i => agreementIds.has(i.agreementId) || regulationIds.has(i.regulationId),
+  );
+
+  // Alerts point at one of four entity kinds; keep alerts that target a Guinean entity.
+  const systemAlerts = SYSTEM_ALERTS.filter(a => {
+    switch (a.entityType) {
+      case 'agreement':  return agreementIds.has(a.entityId);
+      case 'operator':   return operatorIds.has(a.entityId);
+      case 'commitment': return commitmentIds.has(a.entityId);
+      case 'regulation': return regulationIds.has(a.entityId);
+      default:           return false;
+    }
+  });
+
   return {
-    countries: COUNTRIES,
-    operators: OPERATORS,
-    agreements: AGREEMENTS,
-    commitments: COMMITMENTS,
-    performanceRecords: PERFORMANCE_RECORDS,
-    riskFlags: RISK_FLAGS,
-    infrastructureObligations: INFRASTRUCTURE_OBLIGATIONS,
-    beneficialOwnerTrees: BENEFICIAL_OWNER_TREES,
-    protectedZones: PROTECTED_ZONES,
-    concessionConflicts: CONCESSION_CONFLICTS,
-    commodityPrices: COMMODITY_PRICES,
-    localContentRecords: LOCAL_CONTENT_RECORDS,
-    documentAccessLogs: DOCUMENT_ACCESS_LOGS,
-    eitiReportSections: EITI_REPORT_SECTIONS,
-    esgMetrics: ESG_METRICS,
-    mineClosures: MINE_CLOSURES,
-    commodityMarketData: COMMODITY_MARKET_DATA,
-    managedDocuments: MANAGED_DOCUMENTS,
-    systemAlerts: SYSTEM_ALERTS,
-    publicDatasets: PUBLIC_DATASETS,
-    publicationLogs: PUBLICATION_LOGS,
-    regulatoryChanges: REGULATORY_CHANGES,
-    regulatoryImpacts: REGULATORY_IMPACTS,
+    countries,
+    operators,
+    agreements,
+    commitments,
+    performanceRecords,
+    riskFlags,
+    infrastructureObligations,
+    beneficialOwnerTrees,
+    protectedZones,
+    concessionConflicts,
+    commodityPrices: COMMODITY_PRICES,       // global market reference data
+    localContentRecords,
+    documentAccessLogs,
+    eitiReportSections,
+    esgMetrics,
+    mineClosures,
+    commodityMarketData: COMMODITY_MARKET_DATA, // global market reference data
+    managedDocuments,
+    systemAlerts,
+    publicDatasets,
+    publicationLogs,
+    regulatoryChanges,
+    regulatoryImpacts,
   };
 }
 

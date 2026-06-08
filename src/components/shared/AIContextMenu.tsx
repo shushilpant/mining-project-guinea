@@ -148,7 +148,7 @@ export function AIContextMenu() {
       role="menu"
       aria-label="AI briefing menu"
       data-ai-overlay
-      className="ai-menu-pop fixed z-[1000] bg-surface rounded-xl border border-line shadow-pop overflow-hidden"
+      className="ai-menu-pop fixed z-[1000] bg-surface dark:bg-[#141414] rounded-xl border border-line shadow-pop overflow-hidden"
       style={{
         left, top, width: MENU_W,
         transformOrigin: `${originX} ${originY}`,
@@ -167,10 +167,18 @@ export function AIContextMenu() {
         />
         <div className="min-w-0 flex-1">
           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-3">
-            {menu.hit.entity?.kind ?? (menu.hit.region ? 'section' : (menu.hit.selectedText ? 'selection' : 'page'))}
+            {menu.hit.entity?.kind
+              ?? (menu.hit.selectedText ? 'selection'
+                : menu.hit.precisePoint ? 'data point'
+                : menu.hit.region ? 'section'
+                : 'page')}
           </div>
           <div className="text-[12px] font-semibold text-ink truncate">
-            {menu.hit.entity?.label ?? menu.hit.region ?? (menu.hit.selectedText ? 'selected text' : location.pathname)}
+            {menu.hit.entity?.label
+              ?? (menu.hit.selectedText ? 'selected text'
+                : menu.hit.precisePoint
+                  ? (menu.hit.precisePoint.length > 48 ? menu.hit.precisePoint.slice(0, 48) + '…' : menu.hit.precisePoint)
+                  : menu.hit.region ?? location.pathname)}
           </div>
           {menu.hit.entity?.sub && (
             <div className="text-[10px] text-ink-4 truncate">{menu.hit.entity.sub}</div>

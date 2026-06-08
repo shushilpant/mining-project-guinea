@@ -13,17 +13,12 @@ import { MetricCard } from '@/components/shared/MetricCard';
 import { ModuleIntro } from '@/components/shared/ModuleIntro';
 import { ChartPanel } from '@/components/shared/ChartPanel';
 import { Globe2, Database, Download, Eye, EyeOff, Gauge, Lock } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { PublicDataset } from '@/data/types';
-
-const AXIS = '#8AA396';
-const GRID = 'var(--border)';
-const TOOLTIP_STYLE = { fontSize: 12, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--card)', color: 'var(--foreground)' } as const;
 
 const CATEGORY_COLOR: Record<PublicDataset['category'], string> = {
   revenue: '#016940', licenses: '#1D6FB8', production: '#D97706', esg: '#10B981', local_content: '#8B5CF6',
 };
-const categoryLabel = (c: PublicDataset['category']) => c.replace('_', ' ');
+const categoryLabel = (c: PublicDataset['category']) => (c === 'licenses' ? 'licences' : c.replace('_', ' '));
 
 const STATUS_STYLE: Record<string, string> = {
   published: 'text-status-success bg-status-success/10',
@@ -74,6 +69,8 @@ export function PublicPortalPage() {
     () => [...datasets].filter(d => d.downloadCount > 0).sort((a, b) => b.downloadCount - a.downloadCount),
     [datasets],
   );
+  // Sorted descending, so the first entry is the busiest — used to scale the bars.
+  const maxDownloads = downloadStats[0]?.downloadCount ?? 0;
 
   const totalDownloads = useMemo(() => datasets.reduce((s, d) => s + d.downloadCount, 0), [datasets]);
   const publicCount = datasets.filter(isPublic).length;
@@ -83,15 +80,17 @@ export function PublicPortalPage() {
     return list.map(c => ({ country: c, ...getEITIReportReadiness(c.id) }));
   }, [countries, countryId]);
 
-  const handleExport = () => {
-    if (!activeDataset || preview.length === 0) return;
-    const rows = generatePublicExport(activeDataset.id);
-    const base = activeDataset.name.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
-    if (format === 'JSON') {
+  // Build and trigger a download for a single dataset in the given format.
+  // Shared by the Export Builder and the per-dataset buttons in the catalogue.
+  const downloadDataset = (dataset: PublicDataset, fmt: Format) => {
+    const rows = generatePublicExport(dataset.id);
+    if (rows.length === 0) return;
+    const base = dataset.name.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
+    if (fmt === 'JSON') {
       triggerDownload(`${base}.json`, JSON.stringify(rows, null, 2), 'application/json');
     } else {
       const ws = XLSX.utils.json_to_sheet(sanitizeRecords(rows as Record<string, unknown>[]));
-      if (format === 'CSV') {
+      if (fmt === 'CSV') {
         triggerDownload(`${base}.csv`, XLSX.utils.sheet_to_csv(ws), 'text/csv;charset=utf-8');
       } else {
         const wb = XLSX.utils.book_new();
@@ -99,6 +98,36 @@ export function PublicPortalPage() {
         XLSX.writeFile(wb, `${base}.xlsx`);
       }
     }
+  };
+
+  const handleExport = () => {
+    if (!activeDataset || preview.length === 0) return;
+    downloadDataset(activeDataset, format);
+  };
+
+  // Batch export: bundle every open dataset into a single Excel workbook,
+  // one sheet per dataset. Private datasets are excluded by design.
+  const downloadAllPublic = () => {
+    const wb = XLSX.utils.book_new();
+    const usedNames = new Set<string>();
+    let sheets = 0;
+    for (const d of datasets.filter(isPublic)) {
+      const rows = generatePublicExport(d.id);
+      if (rows.length === 0) continue;
+      // Excel sheet names: max 31 chars, no : \ / ? * [ ], and must be unique.
+      const safe = (d.name.replace(/[:\\/?*[\]]/g, ' ').trim() || 'Sheet').slice(0, 31);
+      let name = safe;
+      for (let i = 2; usedNames.has(name.toLowerCase()); i++) {
+        const suffix = ` (${i})`;
+        name = safe.slice(0, 31 - suffix.length) + suffix;
+      }
+      usedNames.add(name.toLowerCase());
+      const ws = XLSX.utils.json_to_sheet(sanitizeRecords(rows as Record<string, unknown>[]));
+      XLSX.utils.book_append_sheet(wb, ws, name);
+      sheets++;
+    }
+    if (sheets === 0) return;
+    XLSX.writeFile(wb, `open_data_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   return (
@@ -118,10 +147,10 @@ export function PublicPortalPage() {
         <MetricCard label="Avg EITI Readiness" value={`${readiness.length ? Math.round(readiness.reduce((s, r) => s + r.readinessPercent, 0) / readiness.length) : 0}%`} sub="Public-reporting completeness" icon={<Gauge size={16} />} accent="amber" hint="Average EITI public-reporting readiness across countries in scope." />
       </div>
 
-      {/* Dataset catalog */}
+      {/* Dataset catalogue */}
       <section className="glass-card">
         <div className="px-6 py-4 border-b border-line-soft bg-foreground/[0.01]">
-          <h2 className="text-[14px] font-bold tracking-wide text-foreground">Dataset Catalog</h2>
+          <h2 className="text-[14px] font-bold tracking-wide text-foreground">Dataset Catalogue</h2>
           <p className="text-[12px] text-ink-4 font-medium">{isAdmin ? 'Toggle a dataset public or private' : 'Open datasets available for download'}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-5">
@@ -149,6 +178,19 @@ export function PublicPortalPage() {
                   <span>{d.recordCount.toLocaleString()} rows · {d.format}</span>
                   <span>{new Date(d.lastPublished).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
+                {pub ? (
+                  <button
+                    onClick={() => downloadDataset(d, 'CSV')}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600/10 text-brand-700 text-[12px] font-bold hover:bg-brand-600/20 transition-colors"
+                    title={`Download ${d.name} as CSV`}
+                  >
+                    <Download size={13} /> Download CSV
+                  </button>
+                ) : (
+                  <div className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-foreground/5 text-ink-4 text-[12px] font-semibold cursor-default" title="Private dataset — not available for public download">
+                    <Lock size={13} /> Not public
+                  </div>
+                )}
               </div>
             );
           })}
@@ -239,27 +281,65 @@ export function PublicPortalPage() {
         <ChartPanel
           className="lg:col-span-3"
           title="Download Analytics"
-          caption="Public download counts per dataset."
-          howToRead="Taller bars are the most-downloaded open datasets — a signal of what the public and oversight bodies use most."
+          caption="Public download counts per dataset — download any open dataset directly."
+          howToRead="Datasets are ranked by all-time public downloads. Use the download button on each open dataset to export it as CSV; private datasets are not available for public download."
           accent="#1D6FB8"
           aiRegion="Download Analytics"
-          ariaLabel="Bar chart of download counts per dataset."
+          ariaLabel="Ranked list of datasets by download count, each with a download button."
           bodyClassName="p-5 h-[300px]"
+          actions={
+            publicCount > 0 ? (
+              <button
+                onClick={downloadAllPublic}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600/10 px-2.5 py-1.5 text-[11px] font-bold text-brand-700 transition-colors hover:bg-brand-600/20"
+                title="Download every open dataset as a single Excel workbook (one sheet per dataset)"
+              >
+                <Download size={12} /> Download all ({publicCount})
+              </button>
+            ) : undefined
+          }
         >
           {downloadStats.length === 0 ? (
             <div className="flex items-center justify-center h-full text-ink-4 text-sm">No downloads yet in this scope.</div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={downloadStats} layout="vertical" margin={{ top: 0, right: 24, bottom: 0, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: AXIS }} tickLine={false} axisLine={false} />
-                <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 9, fill: AXIS }} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: 'var(--secondary)' }} formatter={(v) => [`${Number(v).toLocaleString()}`, 'Downloads']} contentStyle={TOOLTIP_STYLE} />
-                <Bar dataKey="downloadCount" radius={[0, 3, 3, 0]}>
-                  {downloadStats.map(d => <Cell key={d.id} fill={CATEGORY_COLOR[d.category]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ul className="h-full overflow-y-auto slim-scrollbar divide-y divide-line-soft">
+              {downloadStats.map((d, i) => {
+                const pub = isPublic(d);
+                const color = CATEGORY_COLOR[d.category];
+                const pct = maxDownloads > 0 ? Math.round((d.downloadCount / maxDownloads) * 100) : 0;
+                return (
+                  <li key={d.id} className="flex items-center gap-3 py-2.5">
+                    <span className="shrink-0 w-5 text-right text-[11px] font-bold tabular-nums text-ink-4">{i + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-[12px] font-semibold text-ink">{d.name}</span>
+                        <span className="shrink-0 text-[11px] font-mono tabular-nums text-ink-4">{d.downloadCount.toLocaleString()}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full border border-line-soft bg-background">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                    </div>
+                    {pub ? (
+                      <button
+                        onClick={() => downloadDataset(d, 'CSV')}
+                        className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600/10 text-brand-700 transition-colors hover:bg-brand-600/20"
+                        aria-label={`Download ${d.name} as CSV`}
+                        title={`Download ${d.name} as CSV`}
+                      >
+                        <Download size={14} />
+                      </button>
+                    ) : (
+                      <span
+                        className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-foreground/5 text-ink-4"
+                        title="Private dataset — not available for public download"
+                      >
+                        <Lock size={14} />
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </ChartPanel>
 

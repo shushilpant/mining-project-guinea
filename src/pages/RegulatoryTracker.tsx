@@ -27,26 +27,24 @@ const SEVERITY_STYLE: Record<RegulatoryChange['impactSeverity'], string> = {
 const IMPACT_LABEL: Record<string, string> = {
   royalty_increase: 'Royalty increase',
   new_obligation: 'New obligation',
-  stabilization_conflict: 'Stabilization conflict',
+  stabilization_conflict: 'Stabilisation conflict',
   compliance_gap: 'Compliance gap',
 };
 
-const categoryLabel = (c: string) => c.replace(/_/g, ' ');
+const categoryLabel = (c: string) => (c === 'labor' ? 'labour' : c.replace(/_/g, ' '));
 const TODAY = new Date('2026-05-31');
 
-// Side-by-side regulatory framework comparison (verified primary-source facts).
+// Regulatory framework reference (verified primary-source facts) for Guinea.
 interface FrameworkRow { label: string; values: Record<string, string>; }
 const COMPARISON: FrameworkRow[] = [
-  { label: 'Gold royalty',     values: { GIN: 'n/a (bauxite/iron)', GHA: '5–12% sliding', CIV: 'up to 8% (>$2,000/oz)' } },
-  { label: 'Other royalty',    values: { GIN: 'Bauxite 0.075% · Iron 3%', GHA: 'Lithium 5–12% · Mn 5%', CIV: '—' } },
-  { label: 'Corporate tax',    values: { GIN: '30%', GHA: '35%', CIV: '25% (+5yr holiday)' } },
-  { label: 'State free-carry', values: { GIN: '15% (up to 35%)', GHA: '10%', CIV: '10% (up to 15%)' } },
-  { label: 'BO register',      values: { GIN: 'Drafted, pending', GHA: 'Partial', CIV: '2024 (restricted)' } },
+  { label: 'Gold royalty',     values: { GIN: 'n/a (bauxite/iron)' } },
+  { label: 'Other royalty',    values: { GIN: 'Bauxite 0.075% · Iron 3%' } },
+  { label: 'Corporate tax',    values: { GIN: '30%' } },
+  { label: 'State free-carry', values: { GIN: '15% (up to 35%)' } },
+  { label: 'BO register',      values: { GIN: 'Drafted, pending' } },
 ];
 const COMPARE_COUNTRIES = [
   { id: 'GIN', name: 'Guinea' },
-  { id: 'GHA', name: 'Ghana' },
-  { id: 'CIV', name: "Côte d'Ivoire" },
 ];
 
 export function RegulatoryTrackerPage() {
@@ -76,7 +74,7 @@ export function RegulatoryTrackerPage() {
     <div className="space-y-6">
       <PageHeader
         title="Regulatory Tracker"
-        subtitle="Keep up with new mining laws, taxes, and rules across the region."
+        subtitle="Keep up with new mining laws, taxes, and rules in Guinea."
         badge="M13 · Legal & Regulatory Change Monitor"
       />
 
@@ -85,7 +83,7 @@ export function RegulatoryTrackerPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard label="Active Regulations" value={enacted} sub="Enacted & in force" icon={<FileCheck2 size={16} />} accent="green" hint="Regulatory changes already enacted and applying to agreements in scope." />
         <MetricCard label="Proposed Changes" value={proposed} sub="Proposed or under review" icon={<FilePlus2 size={16} />} accent="blue" hint="Upcoming changes not yet in force — worth tracking for early planning." />
-        <MetricCard label="Stabilization Conflicts" value={conflicts.length} sub="Clash with stability clauses" icon={<ShieldAlert size={16} />} accent={conflicts.length > 0 ? 'red' : 'green'} hint="New rules that may conflict with a contract's promise to keep fiscal terms fixed — likely dispute points." />
+        <MetricCard label="Stabilisation Conflicts" value={conflicts.length} sub="Clash with stability clauses" icon={<ShieldAlert size={16} />} accent={conflicts.length > 0 ? 'red' : 'green'} hint="New rules that may conflict with a contract's promise to keep fiscal terms fixed — likely dispute points." />
         <MetricCard label="High-Impact Changes" value={highImpact} sub="Severe financial/legal effect" icon={<AlertTriangle size={16} />} accent={highImpact > 0 ? 'amber' : 'green'} hint="Changes rated high-impact for their financial or legal consequences." />
       </div>
 
@@ -167,15 +165,15 @@ export function RegulatoryTrackerPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Stabilization conflict detector */}
+        {/* Stabilisation conflict detector */}
         <section className="glass-card flex flex-col lg:col-span-2">
           <div className="px-6 py-4 border-b border-line-soft bg-foreground/[0.01] flex items-center gap-2">
             <ShieldAlert size={15} className="text-status-danger" />
-            <h2 className="text-[14px] font-bold tracking-wide text-foreground">Stabilization Conflict Detector</h2>
+            <h2 className="text-[14px] font-bold tracking-wide text-foreground">Stabilisation Conflict Detector</h2>
           </div>
           <div className="p-5 space-y-3">
             {conflicts.length === 0 ? (
-              <p className="text-[12px] text-ink-4">No stabilization conflicts detected in this scope.</p>
+              <p className="text-[12px] text-ink-4">No stabilisation conflicts detected in this scope.</p>
             ) : (
               conflicts.map(c => (
                 <div key={c.id} className="rounded-xl border border-status-danger/20 bg-status-danger/[0.05] p-3.5">
@@ -194,8 +192,8 @@ export function RegulatoryTrackerPage() {
         {/* Country comparison */}
         <section className="glass-card flex flex-col lg:col-span-3 overflow-hidden">
           <div className="px-6 py-4 border-b border-line-soft bg-foreground/[0.01]">
-            <h2 className="text-[14px] font-bold tracking-wide text-foreground">Regulatory Framework Comparison</h2>
-            <p className="text-[12px] text-ink-4 font-medium">Royalties, tax, ownership and transparency side by side</p>
+            <h2 className="text-[14px] font-bold tracking-wide text-foreground">Regulatory Framework</h2>
+            <p className="text-[12px] text-ink-4 font-medium">Royalties, tax, ownership and transparency at a glance</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

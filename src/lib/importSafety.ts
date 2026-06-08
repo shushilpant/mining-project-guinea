@@ -1,4 +1,4 @@
-// Defenses for untrusted files entering the app via the Admin import flow.
+// Defences for untrusted files entering the app via the Admin import flow.
 //
 // The file is fully attacker-controlled: it arrives by drag-drop / file picker
 // and is handed to a binary spreadsheet parser. We constrain it on three axes

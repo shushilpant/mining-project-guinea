@@ -310,11 +310,11 @@ export function NegotiationPage() {
           <div className="text-xs leading-relaxed text-brand-800">
             Agreements below peer median represent potential revenue leakage. In renewal negotiations,
             use peer-median benchmarks as the floor — not the target — and calibrate against the IGF
-            MPF, NRGI RGI 2021 country scores and the IMF DIGNAR-type scenarios in IMF Country Report
-            24/131. Ghana&apos;s Royalty Regulations 2025 (5–12% sliding) and Côte d&apos;Ivoire&apos;s
-            2025 Finance Act 8% above USD 2,000/oz establish the contemporary regional floor; the
-            EITI Guinea June 2025 Simandou fiscal-modelling study (USD 700 m – USD 1.7 bn/yr pre-2035,
-            rising to USD 2.7 bn/yr thereafter) anchors the iron-ore benchmark.
+            MPF, Guinea&apos;s NRGI RGI 2021 score (62/100) and the IMF DIGNAR-type scenarios in IMF
+            Country Report 24/131. Guinea&apos;s Code Minier (L/2011/006/CNT) sets a 15% non-dilutable
+            free-carried interest — option to 35% — and a 30% profits tax; the EITI Guinea June 2025
+            Simandou fiscal-modelling study (USD 700 m – USD 1.7 bn/yr pre-2035, rising to USD 2.7 bn/yr
+            thereafter) anchors the iron-ore benchmark.
           </div>
         </div>
       </div>

@@ -36,7 +36,7 @@ export const MODULES: Record<string, ModuleGuide> = {
     route: '/',
     plainName: 'Overview',
     official: 'Executive Dashboard',
-    tagline: 'Your daily snapshot of mining compliance across the region.',
+    tagline: 'Your daily snapshot of mining compliance across Guinea.',
     whatYouCanDo: [
       'See the headline numbers — active agreements, companies watched, and how many promises are being kept.',
       'Spot the most urgent risk alerts and upcoming deadlines at a glance.',
@@ -106,14 +106,14 @@ export const MODULES: Record<string, ModuleGuide> = {
     plainName: 'Public Reporting',
     official: 'Transparency & Reporting',
     moduleCode: 'M5',
-    tagline: 'The figures we publish openly, and how each country scores.',
+    tagline: 'The figures Guinea publishes openly, and how it scores on transparency.',
     whatYouCanDo: [
-      'Compare countries side by side on compliance, royalties, and openness.',
+      'Review Guinea’s compliance, royalty and openness metrics in one place.',
       'Check readiness for the EITI public-reporting standard.',
       'Export a clean report to share publicly or with oversight bodies.',
     ],
     howToRead:
-      'Higher bars and scores mean better transparency. The country comparison shows where each one leads or lags so you can see who to learn from.',
+      'Higher bars and scores mean better transparency. The category breakdown shows where Guinea leads or lags across its mining obligations.',
   },
   '/scenarios': {
     route: '/scenarios',
@@ -193,7 +193,7 @@ export const MODULES: Record<string, ModuleGuide> = {
     tagline: 'Every contract and report in one searchable, version-tracked library.',
     whatYouCanDo: [
       'Search across document titles, tags, and the clauses inside each contract.',
-      'Filter clauses by type — royalty, stabilization, dispute resolution, and more.',
+      'Filter clauses by type — royalty, stabilisation, dispute resolution, and more.',
       'See the version history and key extracted clauses for any agreement.',
     ],
     howToRead:
@@ -206,26 +206,26 @@ export const MODULES: Record<string, ModuleGuide> = {
     moduleCode: 'M12',
     tagline: 'Publish open datasets and export clean data for public transparency.',
     whatYouCanDo: [
-      'Browse the datasets available for public release, by country and theme.',
+      'Browse the datasets available for public release, by theme.',
       'Mark a dataset public or private and export it as CSV, JSON, or Excel.',
-      'Check each country’s EITI public-reporting readiness at a glance.',
+      'Check Guinea’s EITI public-reporting readiness at a glance.',
     ],
     howToRead:
-      'Public datasets are open for anyone to download; private ones are still under review. The readiness gauge shows how complete a country’s EITI disclosures are — higher is closer to fully reporting.',
+      'Public datasets are open for anyone to download; private ones are still under review. The readiness gauge shows how complete Guinea’s EITI disclosures are — higher is closer to fully reporting.',
   },
   '/regulatory': {
     route: '/regulatory',
     plainName: 'Regulatory Tracker',
     official: 'Legal & Regulatory Change Monitor',
     moduleCode: 'M13',
-    tagline: 'Keep up with new mining laws, taxes, and rules across the region.',
+    tagline: 'Keep up with new mining laws, taxes, and rules in Guinea.',
     whatYouCanDo: [
       'Follow regulatory changes by status — enacted, proposed, under review, or withdrawn.',
       'See which agreements each change affects and its estimated financial impact.',
-      'Spot where a new rule clashes with a contract’s stability (stabilization) clause.',
+      'Spot where a new rule clashes with a contract’s stability (stabilisation) clause.',
     ],
     howToRead:
-      'The timeline runs newest first. A “stabilization conflict” flag means a new rule may clash with a promise to keep a company’s terms fixed — a likely point of dispute to watch.',
+      'The timeline runs newest first. A “stabilisation conflict” flag means a new rule may clash with a promise to keep a company’s terms fixed — a likely point of dispute to watch.',
   },
   '/admin': {
     route: '/admin',
@@ -284,7 +284,7 @@ const GLOSSARY_LIST: GlossaryEntry[] = [
   { term: 'Agreement', definition: 'The contract between the government and a mining company setting out rights, royalties, and obligations.' },
   { term: 'Benchmark', definition: 'A reference value (here, a typical royalty rate for a mineral) used to judge whether a specific deal is fair.' },
   { term: 'ESG', definition: 'Environmental, Social and Governance — a way of measuring how responsibly a company operates: its impact on nature, on people and communities, and how well it is run.' },
-  { term: 'Stabilization clause', definition: 'A contract term that freezes a company’s tax and royalty rates for a set period, so later law changes do not apply to it — a common source of dispute when rules change.' },
+  { term: 'Stabilisation clause', definition: 'A contract term that freezes a company’s tax and royalty rates for a set period, so later law changes do not apply to it — a common source of dispute when rules change.' },
   { term: 'Rehabilitation provision', definition: 'Money a company sets aside to clean up and restore a mine site once mining ends. “% funded” shows how much of the required amount has actually been paid in.' },
   { term: 'Tailings', definition: 'The leftover waste material after the valuable mineral is removed, usually stored behind a dam. Tailings dams must be monitored closely because failures can be catastrophic.' },
   { term: 'Galamsey', definition: 'Illegal, unlicensed small-scale gold mining in Ghana, a major cause of river pollution (high turbidity) and a recurring environmental and security concern.' },

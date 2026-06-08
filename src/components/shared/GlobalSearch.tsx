@@ -152,7 +152,7 @@ export function GlobalSearch() {
         <div
           role="dialog"
           aria-label="Global record search"
-          className="absolute left-0 top-full mt-2 w-[420px] bg-surface rounded-xl shadow-pop z-50 overflow-hidden border border-line"
+          className="absolute left-0 top-full mt-2 w-[420px] bg-surface dark:bg-[#141414] rounded-xl shadow-pop z-50 overflow-hidden border border-line"
         >
           <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-line-soft">
             <Search size={14} className="text-ink-4 shrink-0" aria-hidden />

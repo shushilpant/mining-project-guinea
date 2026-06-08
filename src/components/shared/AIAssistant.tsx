@@ -20,17 +20,16 @@ import { Sparkles, Send, Square, X, Settings2, AlertTriangle, Eraser, Bot, User 
 import { useCountry } from '@/context/CountryContext';
 import { useAISettingsStore, isProviderReady } from '@/store/aiSettingsStore';
 import { streamChat, type ChatMessage } from '@/services/aiService';
-import { buildContext, buildSystemPrompt } from '@/lib/aiContext';
+import { buildContext, buildSystemPrompt, buildDomainPrimer, OUT_OF_SCOPE_REPLY } from '@/lib/aiContext';
+import { checkScope } from '@/lib/scopeGate';
 import { CitedText } from '@/components/shared/CitedText';
 
 const GOLD = '#d68a18';
 const SIDEBAR_BG = '#062b1d';
 
 const COUNTRY_LABEL: Record<string, string> = {
-  ALL: 'West Africa region',
+  ALL: 'Republic of Guinea',
   GIN: 'Republic of Guinea',
-  GHA: 'Republic of Ghana',
-  CIV: "Republic of Côte d'Ivoire",
 };
 
 interface QuickAction {
@@ -133,62 +132,98 @@ export function AIAssistant() {
     setInput('');
     setBusy(true);
 
-    // Rebuild the briefing pack on every send so it reflects the *current*
-    // country selection and any admin edits made since the last turn.
-    const context  = buildContext({ countryId: selectedCountry });
-    const sysPrompt = buildSystemPrompt(COUNTRY_LABEL[selectedCountry] ?? 'West Africa region');
-
-    // We replay prior turns so the model has conversation memory, but keep
-    // the briefing pack as a single fresh message right before the user's
-    // current question — that way the model always sees current data.
-    const history: ChatMessage[] = messages
-      .filter(m => !m.error)
-      .map(m => ({ role: m.role, content: m.content }));
-
-    const wire: ChatMessage[] = [
-      { role: 'system', content: sysPrompt },
-      ...history,
-      { role: 'system', content: `BRIEFING PACK (live data, ground every answer in this):\n\n${context}` },
-      ...(extraPack
-        ? [{ role: 'system' as const, content: `ANCHOR — the user opened this chat from a specific record. Treat this as the primary context for the next answer:\n\n${extraPack}` }]
-        : []),
-      { role: 'user',   content: trimmed },
-    ];
-
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    streamChat(
-      {
-        provider:     ai.provider,
-        model:        ai.model,
-        apiKey:       ai.openRouterKey || undefined,
+    const refuseOutOfScope = (reply = OUT_OF_SCOPE_REPLY) => {
+      setMessages(prev => prev.map(m =>
+        m.id === asstId ? { ...m, content: reply, streaming: false } : m,
+      ));
+      setBusy(false);
+      abortRef.current = null;
+    };
+
+    void (async () => {
+      const priorTurns = messages
+        .filter(m => !m.error)
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const scope = await checkScope(trimmed, { priorTurns }, {
+        provider: ai.provider,
+        model: ai.model,
+        apiKey: ai.openRouterKey || undefined,
         localBaseUrl: ai.localBaseUrl || undefined,
-        messages:     wire,
-        signal:       ctrl.signal,
-      },
-      {
-        onDelta: (chunk) => {
-          setMessages(prev => prev.map(m =>
-            m.id === asstId ? { ...m, content: m.content + chunk } : m,
-          ));
-        },
-        onDone: () => {
-          setMessages(prev => prev.map(m =>
-            m.id === asstId ? { ...m, streaming: false } : m,
-          ));
+        signal: ctrl.signal,
+      });
+
+      if (!scope.allowed) {
+        if (ctrl.signal.aborted) {
+          setMessages(prev => prev.map(m => m.id === asstId ? { ...m, streaming: false } : m));
           setBusy(false);
           abortRef.current = null;
+          return;
+        }
+        refuseOutOfScope(scope.reply);
+        return;
+      }
+
+      // Rebuild the briefing pack on every send so it reflects the *current*
+      // country selection and any admin edits made since the last turn.
+      const context  = buildContext({ countryId: selectedCountry });
+      const sysPrompt = buildSystemPrompt(COUNTRY_LABEL[selectedCountry] ?? 'Republic of Guinea');
+
+      // We replay prior turns so the model has conversation memory, but keep
+      // the briefing pack as a single fresh message right before the user's
+      // current question — that way the model always sees current data.
+      const history: ChatMessage[] = messages
+        .filter(m => !m.error)
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const wire: ChatMessage[] = [
+        { role: 'system', content: sysPrompt },
+        // Static reference: platform, modules, map markers and full glossary, so
+        // the model can answer "what are concessions?" / "what do markers mean?".
+        { role: 'system', content: buildDomainPrimer() },
+        ...history,
+        { role: 'system', content: `BRIEFING PACK (live data, ground every answer in this):\n\n${context}` },
+        ...(extraPack
+          ? [{ role: 'system' as const, content: `ANCHOR — the user opened this chat from a specific record. Treat this as the primary context for the next answer:\n\n${extraPack}` }]
+          : []),
+        { role: 'user',   content: trimmed },
+      ];
+
+      streamChat(
+        {
+          provider:     ai.provider,
+          model:        ai.model,
+          apiKey:       ai.openRouterKey || undefined,
+          localBaseUrl: ai.localBaseUrl || undefined,
+          messages:     wire,
+          signal:       ctrl.signal,
         },
-        onError: (err) => {
-          setMessages(prev => prev.map(m =>
-            m.id === asstId ? { ...m, streaming: false, error: err.message } : m,
-          ));
-          setBusy(false);
-          abortRef.current = null;
+        {
+          onDelta: (chunk) => {
+            setMessages(prev => prev.map(m =>
+              m.id === asstId ? { ...m, content: m.content + chunk } : m,
+            ));
+          },
+          onDone: () => {
+            setMessages(prev => prev.map(m =>
+              m.id === asstId ? { ...m, streaming: false } : m,
+            ));
+            setBusy(false);
+            abortRef.current = null;
+          },
+          onError: (err) => {
+            setMessages(prev => prev.map(m =>
+              m.id === asstId ? { ...m, streaming: false, error: err.message } : m,
+            ));
+            setBusy(false);
+            abortRef.current = null;
+          },
         },
-      },
-    ).catch(() => { /* error already surfaced via onError */ });
+      ).catch(() => { /* error already surfaced via onError */ });
+    })();
   }, [busy, ready, messages, selectedCountry, ai.provider, ai.model, ai.openRouterKey, ai.localBaseUrl]);
 
   const stop = () => {
@@ -237,7 +272,7 @@ export function AIAssistant() {
         <div
           role="dialog"
           aria-label="AI Compliance Analyst"
-          className="absolute right-0 top-full mt-2 w-[460px] max-w-[calc(100vw-2rem)] bg-card rounded-xl shadow-pop z-50 overflow-hidden border border-line flex flex-col"
+          className="absolute right-0 top-full mt-2 w-[460px] max-w-[calc(100vw-2rem)] bg-card dark:bg-[#141414] rounded-xl shadow-pop z-50 overflow-hidden border border-line flex flex-col"
           style={{ height: 'min(640px, calc(100vh - 5rem))' }}
         >
           {/* Header strip */}

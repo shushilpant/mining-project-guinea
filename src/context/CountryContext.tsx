@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
-type CountryId = 'ALL' | 'GIN' | 'GHA' | 'CIV';
+// Dedicated single-country deployment. The 'ALL' scope and the other West
+// Africa markets have been retired; scope is permanently locked to Guinea, but
+// the union and setter are retained so existing `=== 'ALL'` guards stay valid.
+type CountryId = 'ALL' | 'GIN';
 
 interface CountryContextValue {
   selectedCountry: CountryId;
@@ -8,12 +11,12 @@ interface CountryContextValue {
 }
 
 const CountryContext = createContext<CountryContextValue>({
-  selectedCountry: 'ALL',
+  selectedCountry: 'GIN',
   setSelectedCountry: () => {},
 });
 
 export function CountryProvider({ children }: { children: ReactNode }) {
-  const [selectedCountry, setSelectedCountry] = useState<CountryId>('ALL');
+  const [selectedCountry, setSelectedCountry] = useState<CountryId>('GIN');
   return (
     <CountryContext.Provider value={{ selectedCountry, setSelectedCountry }}>
       {children}

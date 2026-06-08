@@ -1,7 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useCountry } from '@/context/CountryContext';
-import { CountrySelector } from '@/components/shared/CountrySelector';
 import { AlertCenter } from '@/components/shared/AlertCenter';
 import { GlobalSearch } from '@/components/shared/GlobalSearch';
 import { AIAssistant } from '@/components/shared/AIAssistant';
@@ -50,10 +49,8 @@ const SIDEBAR_DEFAULT = 280;
 const SIDEBAR_LEFT_INSET = 16; // matches the p-4 padding around the floating sidebar
 
 const COUNTRY_LABELS: Record<string, string> = {
-  ALL: 'West Africa Region',
+  ALL: 'Republic of Guinea',
   GIN: 'Republic of Guinea',
-  GHA: 'Republic of Ghana',
-  CIV: "Republic of Côte d'Ivoire",
 };
 
 function NavItem({ item }: { item: NavItemDef }) {
@@ -316,15 +313,19 @@ export function Layout() {
           {/* Ministry identity */}
           <div className="px-5 pt-5 pb-4 relative z-10 border-b border-white/[0.08]">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gold-500 shadow-sm">
-                <span className="font-extrabold text-[11px] tracking-tight" style={{ color: '#011F14' }}>MoM</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-white/10 shadow-sm p-1.5 overflow-hidden">
+                <img 
+                  src="/guinea-coat-of-arms.svg" 
+                  alt="Republic of Guinea Coat of Arms" 
+                  className="w-full h-full object-contain drop-shadow-sm" 
+                />
               </div>
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] leading-none text-gold-500">
-                  Ministries of Mining
+                  Ministry of Mines
                 </div>
                 <div className="text-[10px] tracking-wide leading-none mt-1.5 text-white/45">
-                  West Africa
+                  Republic of Guinea
                 </div>
               </div>
             </div>
@@ -410,8 +411,6 @@ export function Layout() {
             <div className="flex items-center gap-2 lg:gap-3 shrink-0">
               <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
                 <GlobalSearch />
-                <span className="w-px h-6 bg-line-strong shrink-0" />
-                <CountrySelector />
                 <span className="w-px h-6 bg-line-strong shrink-0" />
                 <AIAssistant />
                 <span className="w-px h-6 bg-line-strong shrink-0" />

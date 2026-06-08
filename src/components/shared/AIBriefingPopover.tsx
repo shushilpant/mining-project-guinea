@@ -27,8 +27,10 @@ import {
 import { useAIBriefingStore } from '@/store/aiBriefingStore';
 import { useAISettingsStore, isProviderReady } from '@/store/aiSettingsStore';
 import { streamChat } from '@/services/aiService';
+import { checkScope } from '@/lib/scopeGate';
 import { useAuditStore } from '@/store/auditStore';
 import { aiCacheGet, aiCacheSet, fingerprint } from '@/lib/aiCache';
+import { buildDomainPrimer, OUT_OF_SCOPE_REPLY } from '@/lib/aiContext';
 import { splitActions, dispatchAction, type AIAction } from '@/lib/aiActions';
 import { CitedText } from '@/components/shared/CitedText';
 
@@ -168,56 +170,87 @@ function BriefCard({ onClose }: { onClose: () => void }) {
 
   const submitFollowUp = useCallback((text: string) => {
     if (busy || !ready || !text.trim()) return;
-    const userMsgState = { role: 'user' as const, content: text.trim() };
-    // Inject a strong constraint into the prompt sent to the LLM, but don't show it in the UI.
-    const userMsgLLM = { 
-      role: 'user' as const, 
-      content: `${text.trim()}\n\n[SYSTEM INSTRUCTION: If the above question is not strictly related to the mining compliance data or the provided context, you MUST decline to answer by saying exactly: "This request falls outside my operational scope. I am designed exclusively to analyse and advise on the mining compliance data provided within this dashboard." Do not provide any other information. Never end your response with a follow-up question or offer of further assistance.]` 
-    };
+    const userMsg = { role: 'user' as const, content: text.trim() };
 
-    setThread(prev => [...prev, userMsgState, { role: 'assistant', content: '' }]);
+    setThread(prev => [...prev, userMsg, { role: 'assistant', content: '' }]);
     setBusy(true);
     setError(null);
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    const historyForAI = [
-      ...brief.option.buildMessages(),
-      { role: 'assistant' as const, content },
-      ...thread,
-      userMsgLLM,
-    ];
+    // Update the trailing (placeholder) assistant turn we just appended.
+    const setLastAssistant = (updater: (c: string) => string) =>
+      setThread(prev => {
+        const next = [...prev];
+        next[next.length - 1] = { ...next[next.length - 1], content: updater(next[next.length - 1].content) };
+        return next;
+      });
 
-    streamChat(
-      {
+    void (async () => {
+      const priorTurns = [
+        ...(content.trim() ? [{ role: 'assistant' as const, content }] : []),
+        ...thread,
+      ];
+
+      const scope = await checkScope(text.trim(), {
+        priorTurns,
+        anchorLabel: brief.option.entityLabel,
+      }, {
         provider: ai.provider,
         model: ai.model,
         apiKey: ai.openRouterKey || undefined,
         localBaseUrl: ai.localBaseUrl || undefined,
-        messages: historyForAI,
         signal: ctrl.signal,
-        temperature: brief.option.temperature ?? 0.2,
-      },
-      {
-        onDelta: (chunk) => {
-          setThread(prev => {
-            const next = [...prev];
-            next[next.length - 1] = { ...next[next.length - 1], content: next[next.length - 1].content + chunk };
-            return next;
-          });
-        },
-        onDone: () => {
+      });
+
+      if (!scope.allowed) {
+        if (ctrl.signal.aborted) {
           setBusy(false);
           abortRef.current = null;
-        },
-        onError: (err) => {
-          setError(err.message);
-          setBusy(false);
-          abortRef.current = null;
-        },
+          return;
+        }
+        setLastAssistant(() => scope.reply ?? OUT_OF_SCOPE_REPLY);
+        setBusy(false);
+        abortRef.current = null;
+        return;
       }
-    ).catch(() => {});
+
+      // Lead with the domain primer so follow-ups about the platform, map
+      // markers or terminology can be answered — the brief's own messages only
+      // carry the record-level pack.
+      const historyForAI = [
+        { role: 'system' as const, content: buildDomainPrimer() },
+        ...brief.option.buildMessages(),
+        { role: 'assistant' as const, content },
+        ...thread,
+        userMsg,
+      ];
+
+      streamChat(
+        {
+          provider: ai.provider,
+          model: ai.model,
+          apiKey: ai.openRouterKey || undefined,
+          localBaseUrl: ai.localBaseUrl || undefined,
+          messages: historyForAI,
+          signal: ctrl.signal,
+          temperature: brief.option.temperature ?? 0.2,
+        },
+        {
+          onDelta: (chunk) => { setLastAssistant(c => c + chunk); },
+          onDone: () => {
+            setBusy(false);
+            abortRef.current = null;
+          },
+          onError: (err) => {
+            setError(err.message);
+            setBusy(false);
+            abortRef.current = null;
+          },
+        }
+      ).catch(() => {});
+    })();
   }, [ai, busy, ready, brief.option, content, thread]);
 
   // Auto-run on mount if nothing cached. `run` writes state via streamChat's
@@ -265,7 +298,7 @@ function BriefCard({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-label="AI briefing"
       data-ai-overlay
-      className="ai-brief-in fixed z-[1000] bg-surface rounded-xl border border-line shadow-pop overflow-hidden flex flex-col"
+      className="ai-brief-in fixed z-[1000] bg-surface dark:bg-[#141414] rounded-xl border border-line shadow-pop overflow-hidden flex flex-col"
       style={{
         left: pos.x,
         top:  pos.y,

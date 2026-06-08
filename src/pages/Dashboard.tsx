@@ -15,27 +15,21 @@ import {
   getSystemMetrics, getRiskFlags, getComplianceTrend,
   getAllCountrySummaries, getOperatorById, getAgreementById,
   getCommitments, getSystemAlerts, getCommodityMarketData, getAgreements, formatCommodity,
+  getProtectedZones,
 } from '@/services/dataService';
 import { useAlertStore } from '@/store/alertStore';
-import type { AlertPriority } from '@/data/types';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CountryMap } from '@/components/shared/CountryMap';
 import { MorningBriefStrip } from '@/components/shared/MorningBriefStrip';
 import { ModuleIntro } from '@/components/shared/ModuleIntro';
 import { ChartPanel } from '@/components/shared/ChartPanel';
-import { InfoTip } from '@/components/shared/InfoTip';
+import { Panel, PanelHeader } from '@/components/shared/Panel';
+import {
+  COMPLIANCE_COLOR, COMPLIANCE_URGENCY, SEVERITY_ORDER, ALERT_PRIORITY_COLOR,
+} from '@/lib/statusStyles';
 import { formatDate } from '@/lib/utils';
 import type { RiskFlag } from '@/data/types';
-
-const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-
-const COMPLIANCE_COLORS = {
-  met:       '#10B981', // Emerald 500
-  'on-track':'#3B82F6', // Blue 500
-  'at-risk': '#F59E0B', // Amber 500
-  breached:  '#EF4444', // Red 500
-};
 
 type ActivityType = 'alert' | 'update' | 'info';
 interface ActivityEvent {
@@ -96,8 +90,6 @@ function buildActivityFeed(countryId?: string): ActivityEvent[] {
   return events.slice(0, 5);
 }
 
-const STATUS_URGENCY: Record<string, number> = { breached: 0, 'at-risk': 1, 'on-track': 2, met: 3 };
-
 function buildUpcomingDeadlines(countryId?: string) {
   const today = new Date();
 
@@ -111,7 +103,7 @@ function buildUpcomingDeadlines(countryId?: string) {
     })
     .filter(c => !countryId || c.countryId === countryId)
     .sort((a, b) => {
-      const urgencyDiff = STATUS_URGENCY[a.status] - STATUS_URGENCY[b.status];
+      const urgencyDiff = COMPLIANCE_URGENCY[a.status] - COMPLIANCE_URGENCY[b.status];
       if (urgencyDiff !== 0) return urgencyDiff;
       return a.daysLeft - b.daysLeft;
     })
@@ -133,45 +125,6 @@ const ComplianceTip = ({ active, payload, label }: { active?: boolean; payload?:
       <div className="text-[11px] text-ink-3 relative z-10 font-medium">Compliance Rate</div>
     </div>
   );
-};
-
-/* ── Shared panel wrapper ─────────────────────────── */
-function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <section className={`glass-card flex flex-col ${className}`}>
-      {children}
-    </section>
-  );
-}
-
-function PanelHeader({
-  title, subtitle, actions, accent = '#10B981', howToRead,
-}: {
-  title: string;
-  subtitle?: string;
-  actions?: React.ReactNode;
-  accent?: string;
-  howToRead?: string;
-}) {
-  return (
-    <div className="px-6 py-5 flex items-center justify-between border-b border-line-soft bg-foreground/[0.01]">
-      <div className="flex items-center gap-3">
-        <span className="w-1 h-5 rounded-full shadow-glow" style={{ background: accent }} aria-hidden />
-        <div>
-          <div className="flex items-center gap-1.5">
-            <h2 className="text-[14px] font-bold tracking-wide text-foreground">{title}</h2>
-            {howToRead && <InfoTip title="How to read this" body={howToRead} label={`How to read: ${title}`} />}
-          </div>
-          {subtitle && <p className="text-[12px] mt-0.5 text-ink-4 font-medium">{subtitle}</p>}
-        </div>
-      </div>
-      {actions}
-    </div>
-  );
-}
-
-const ALERT_PRIORITY_COLOR: Record<AlertPriority, string> = {
-  critical: '#DC2626', high: '#EA580C', medium: '#D97706', low: '#6B7280',
 };
 
 /* ── Active Alerts summary — top unacknowledged automated alerts ── */
@@ -278,6 +231,9 @@ export function Dashboard() {
 
   const metrics         = useStoreData(() => getSystemMetrics(countryId),         [countryId]);
   const trendData       = useStoreData(() => getComplianceTrend(countryId),       [countryId]);
+  // Overview map zones — Haut Niger National Park (PZ-1) is hidden here on
+  // purpose; it still appears wherever else protected zones are listed.
+  const mapZones        = useStoreData(() => getProtectedZones(countryId).filter(z => z.id !== 'PZ-1'), [countryId]);
   const countrySummaries = useStoreData(() => getAllCountrySummaries(),            []);
   const activity        = useStoreData(() => buildActivityFeed(countryId),        [countryId]);
   const deadlines       = useStoreData(() => buildUpcomingDeadlines(countryId),   [countryId]);
@@ -301,10 +257,10 @@ export function Dashboard() {
     const counts = { met: 0, 'on-track': 0, 'at-risk': 0, breached: 0 };
     filtered.forEach(c => { counts[c.status] = (counts[c.status] ?? 0) + 1; });
     return [
-      { name: 'Met',      value: counts.met,         color: COMPLIANCE_COLORS.met },
-      { name: 'On-Track', value: counts['on-track'],  color: COMPLIANCE_COLORS['on-track'] },
-      { name: 'At Risk',  value: counts['at-risk'],   color: COMPLIANCE_COLORS['at-risk'] },
-      { name: 'Breached', value: counts.breached,     color: COMPLIANCE_COLORS.breached },
+      { name: 'Met',      value: counts.met,         color: COMPLIANCE_COLOR.met },
+      { name: 'On-Track', value: counts['on-track'],  color: COMPLIANCE_COLOR['on-track'] },
+      { name: 'At Risk',  value: counts['at-risk'],   color: COMPLIANCE_COLOR['at-risk'] },
+      { name: 'Breached', value: counts.breached,     color: COMPLIANCE_COLOR.breached },
     ].filter(d => d.value > 0);
   }, [countryId]);
 
@@ -390,27 +346,14 @@ export function Dashboard() {
 
       {/* ── Map + Trend chart ────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-        <Panel className="lg:col-span-3">
+        <Panel className="lg:col-span-3" aiRegion="Operator & Mine Locations">
           <PanelHeader
             title="Operator & Mine Locations"
             subtitle="Colour indicates operator compliance status"
-            howToRead="Each pin is a mine. Its colour shows how well that company is keeping its commitments — green is healthy, red means breaches. Use the legend below."
+            howToRead="Each pin is a mine. Its colour shows how well that company is keeping its commitments — green is healthy, red means breaches. Use the legend on the map."
           />
           <div className="flex-1 min-h-[300px] relative">
-            <CountryMap countryId={countryId} />
-          </div>
-          <div className="px-6 py-3 flex items-center gap-5 flex-wrap border-t border-line-soft bg-surface">
-            {[
-              { label: 'Met',      color: '#10B981' },
-              { label: 'On Track', color: '#3B82F6' },
-              { label: 'At Risk',  color: '#F59E0B' },
-              { label: 'Breached', color: '#EF4444' },
-            ].map(s => (
-              <div key={s.label} className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ background: s.color, boxShadow: `0 0 8px ${s.color}80` }} />
-                <span className="text-[12px] font-medium text-ink-3">{s.label}</span>
-              </div>
-            ))}
+            <CountryMap countryId={countryId} protectedZones={mapZones} />
           </div>
         </Panel>
 

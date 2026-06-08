@@ -28,13 +28,13 @@ export interface AIModelOption {
 }
 
 // Local models served via LM Studio, Ollama, or any OpenAI-compatible server.
-// Order: default first, then alternatives by size.
+// Order: default first, then alternatives by latency/size.
 export const LOCAL_MODELS: AIModelOption[] = [
-  { id: 'gemma3:4b',     label: 'Gemma 3 · 4B (default)',  hint: 'Google · ~3 GB · fast on 8 GB RAM' },
+  { id: 'llama3.2:3b',   label: 'Llama 3.2 · 3B (instant)', hint: 'Meta · ~2 GB · lowest latency local default' },
+  { id: 'gemma3:4b',     label: 'Gemma 3 · 4B',             hint: 'Google · ~3 GB · fast on 8 GB RAM' },
   { id: 'qwen3.6-40b-claude-4.6-opus-deckard-heretic-uncensored-thinking-neo-code-di-imatrix-max',  label: 'Qwen 3.6 · 40B Opus-Deckard', hint: 'DavidAU · Q4_K_S · uncensored · thinking + code' },
   { id: 'gemma3:12b',    label: 'Gemma 3 · 12B',           hint: 'Google · ~8 GB · stronger reasoning' },
   { id: 'gpt-oss:20b',   label: 'GPT-OSS · 20B',           hint: 'OpenAI open-weight · ~13 GB · best quality' },
-  { id: 'llama3.2:3b',   label: 'Llama 3.2 · 3B',          hint: 'Meta · ~2 GB · very fast' },
   { id: 'llama3.1:8b',   label: 'Llama 3.1 · 8B',          hint: 'Meta · ~5 GB · solid all-rounder' },
   { id: 'qwen2.5:7b',    label: 'Qwen 2.5 · 7B',           hint: 'Alibaba · ~4 GB · multilingual' },
   { id: 'mistral:7b',    label: 'Mistral · 7B',            hint: 'Mistral · ~4 GB · low latency' },
@@ -103,7 +103,7 @@ export const useAISettingsStore = create<AISettingsState>()(
         enabled: true,
       }),
     }),
-    { name: 'peb-ai-settings-v4' },
+    { name: 'peb-ai-settings-v5' },
   ),
 );
 

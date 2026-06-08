@@ -25,7 +25,8 @@ const DOC_TYPE_META: Record<DocType, { label: string; color: string }> = {
 };
 
 const CLAUSE_TYPES: ClauseType[] = ['royalty', 'stabilization', 'dispute_resolution', 'local_content', 'environmental', 'termination', 'force_majeure'];
-const clauseLabel = (t: ClauseType) => t.replace(/_/g, ' ');
+// Keep the data enum value ('stabilization') but display it in British English.
+const clauseLabel = (t: ClauseType) => (t === 'stabilization' ? 'stabilisation' : t.replace(/_/g, ' '));
 
 function confidenceColor(c: number): string {
   if (c >= 0.9) return '#10B981';

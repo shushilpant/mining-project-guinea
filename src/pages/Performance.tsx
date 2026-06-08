@@ -61,15 +61,12 @@ export function PerformancePage() {
 
   const commitments = useStoreData(() => {
     void getAgreements;
-    if (countryId) return getCommitmentsForCountry(countryId);
-    return (['GIN', 'GHA', 'CIV'] as const).flatMap(c => getCommitmentsForCountry(c));
+    return getCommitmentsForCountry(countryId ?? 'GIN');
   }, [countryId]);
   void commitments;
 
   const typeBreakdown = useStoreData(() => {
-    const all = countryId
-      ? getCommitmentsForCountry(countryId)
-      : (['GIN', 'GHA', 'CIV'] as const).flatMap(c => getCommitmentsForCountry(c));
+    const all = getCommitmentsForCountry(countryId ?? 'GIN');
 
     const types: CommitmentType[] = [
       'production', 'infrastructure', 'local-employment',

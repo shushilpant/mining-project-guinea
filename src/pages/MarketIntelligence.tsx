@@ -64,17 +64,16 @@ function ChangeChip({ value, label }: { value: number; label: string }) {
   );
 }
 
-// Price watchlist thresholds that feed the alert layer.
+// Price watchlist thresholds that feed the alert layer — Guinea's export commodities.
 interface Threshold { commodity: Commodity; level: number; unit: string; direction: 'above' | 'below'; note: string; }
 const THRESHOLDS: Threshold[] = [
-  { commodity: 'gold',      level: 4500, unit: 'USD/oz', direction: 'above', note: 'Ghana 12% royalty ceiling' },
-  { commodity: 'lithium',   level: 1500, unit: 'USD/t',  direction: 'below', note: 'Min spodumene royalty band' },
-  { commodity: 'iron ore',  level: 100,  unit: 'USD/t',  direction: 'above', note: 'Simandou economics floor' },
-  { commodity: 'manganese', level: 5.0,  unit: 'USD/dmtu', direction: 'above', note: 'Nsuta refinery viability' },
+  { commodity: 'iron ore', level: 100, unit: 'USD/t', direction: 'above', note: 'Simandou economics floor' },
+  { commodity: 'bauxite',  level: 60,  unit: 'USD/t', direction: 'below', note: 'CBG / SMB margin pressure' },
 ];
 
-// Simple historical price correlation matrix (illustrative).
-const CORR_COMMODITIES: Commodity[] = ['gold', 'bauxite', 'iron ore', 'manganese', 'lithium', 'diamonds'];
+// Simple historical price correlation matrix (illustrative) — Guinea exports plus
+// gold as a world benchmark.
+const CORR_COMMODITIES: Commodity[] = ['bauxite', 'iron ore', 'gold'];
 const CORR: Record<string, Record<string, number>> = {
   'gold':      { 'gold': 1,    'bauxite': 0.2,  'iron ore': 0.1,  'manganese': 0.0,  'lithium': -0.3, 'diamonds': 0.4 },
   'bauxite':   { 'gold': 0.2,  'bauxite': 1,    'iron ore': 0.6,  'manganese': 0.5,  'lithium': 0.1,  'diamonds': 0.1 },
@@ -143,14 +142,13 @@ export function MarketIntelligencePage() {
 
       <ModuleIntro />
 
-      {/* Live commodity prices */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4" data-ai-region="Live Commodity Prices">
-        {market.map(d => {
-          const focused = inScope.size === 0 || inScope.has(d.commodity);
+      {/* Live commodity prices — Guinea's export commodities */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" data-ai-region="Live Commodity Prices">
+        {focusList.map(d => {
           return (
             <div
               key={d.commodity}
-              className={'relative rounded-2xl bg-card border shadow-card p-4 transition-all ' + (focused ? 'border-line-soft' : 'border-line-soft opacity-60')}
+              className="relative rounded-2xl bg-card border border-line-soft shadow-card p-4 transition-all"
               style={{ borderLeftWidth: 3, borderLeftColor: d.change24h >= 0 ? UP : DOWN }}
             >
               <div className="flex items-center justify-between">

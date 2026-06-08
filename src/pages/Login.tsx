@@ -8,7 +8,7 @@ const FEATURES = [
   'Real-time operator compliance tracking',
   'Automated risk flag & breach detection',
   'EITI-aligned transparency reporting',
-  'Cross-country negotiation intelligence',
+  'Royalty benchmarking & negotiation intelligence',
 ];
 
 export function Login() {
@@ -62,15 +62,19 @@ export function Login() {
         {/* Ministry identity */}
         <div className="relative z-10">
           <div className="flex items-center gap-3.5 mb-12">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-gold-500 shadow-sm">
-              <span className="font-extrabold text-[13px] tracking-tight text-forest-900">MoM</span>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-white/10 shadow-sm p-1.5 overflow-hidden">
+              <img 
+                src="/guinea-coat-of-arms.svg" 
+                alt="Republic of Guinea Coat of Arms" 
+                className="w-full h-full object-contain drop-shadow-sm" 
+              />
             </div>
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold-500">
-                Ministries of Mining
+                Ministry of Mines
               </div>
               <div className="text-[11px] tracking-wide mt-1 text-white/45">
-                West Africa · Guinea · Ghana · Côte d'Ivoire
+                Republic of Guinea
               </div>
             </div>
           </div>
@@ -81,7 +85,7 @@ export function Login() {
           </h1>
           <p className="text-[14px] leading-relaxed max-w-sm text-white/55">
             Centralised monitoring of mining agreements, operator performance, and
-            compliance obligations across the West African region.
+            compliance obligations across the Republic of Guinea.
           </p>
         </div>
 
@@ -247,7 +251,7 @@ export function Login() {
         {/* Footer */}
         <div className="px-8 py-3 flex items-center justify-between border-t border-line glass">
           <span className="text-[11px] text-ink-3">
-            National Compliance Intelligence Platform · West Africa
+            National Compliance Intelligence Platform · Republic of Guinea
           </span>
           <span className="text-[11px] font-mono text-ink-4">
             RESTRICTED — Government Use Only

@@ -21,17 +21,11 @@ import {
   daysUntilExpiry,
 } from '@/services/dataService';
 import { useAlertStore } from '@/store/alertStore';
-import type { AlertPriority, AlertCategory } from '@/data/types';
+import type { AlertCategory } from '@/data/types';
+import { ALERT_PRIORITY_COLOR } from '@/lib/statusStyles';
 
 const GOLD = '#d68a18';
 const SIDEBAR_BG = '#062b1d';
-
-const PRIORITY_COLOR: Record<AlertPriority, string> = {
-  critical: '#DC2626',
-  high: '#EA580C',
-  medium: '#D97706',
-  low: '#6B7280',
-};
 
 const CATEGORY_LABEL: Record<AlertCategory, string> = {
   compliance: 'Compliance',
@@ -175,7 +169,7 @@ export function AlertCenter() {
         <div
           role="dialog"
           aria-label="Notifications and alerts"
-          className="absolute right-0 top-full mt-2 w-[368px] bg-surface rounded-xl shadow-pop z-50 overflow-hidden border border-line"
+          className="absolute right-0 top-full mt-2 w-[368px] bg-surface dark:bg-[#141414] rounded-xl shadow-pop z-50 overflow-hidden border border-line"
         >
           <div
             className="px-4 py-3 flex items-center justify-between"
@@ -206,7 +200,7 @@ export function AlertCenter() {
                     <div className="divide-y divide-line-soft">
                       {alerts.map((alert) => {
                         const isAcked = !!acknowledged[alert.id];
-                        const color = PRIORITY_COLOR[alert.priority];
+                        const color = ALERT_PRIORITY_COLOR[alert.priority];
                         return (
                           <div
                             key={alert.id}

@@ -25,16 +25,23 @@ const CACHE_TASK = 'morning-brief';
 const CACHE_TTL  = 1000 * 60 * 60 * 12; // 12h — re-brief twice a day max
 
 const COUNTRY_LABEL: Record<string, string> = {
-  ALL: 'West Africa region',
+  ALL: 'Republic of Guinea',
   GIN: 'Republic of Guinea',
-  GHA: 'Republic of Ghana',
-  CIV: "Republic of Côte d'Ivoire",
 };
 
 export function MorningBriefStrip() {
   const ai = useAISettingsStore();
   const ready = ai.enabled && isProviderReady(ai);
   const { selectedCountry } = useCountry();
+
+  // Auto‑switch to the cloud provider if the local LLM isn’t available.
+  // This prevents the “Failed to fetch” error caused by trying to contact a
+  // non‑existent localhost endpoint on Vercel.
+  useEffect(() => {
+    if (ai.provider === 'local' && !isProviderReady(ai)) {
+      ai.setProvider('pollinations');
+    }
+  }, [ai.provider, ai.enabled]);
 
   // Bucket the cache by the calendar date so the brief naturally rolls over
   // each morning even if the TTL hasn't lapsed.

@@ -20,18 +20,13 @@ import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { sanitizeRecords } from '@/lib/exportSafety';
 
-// Per-country chart palette — pulled from each nation's flag so charts are
-// instantly recognisable: Guinea green, Ghana saffron, Côte d'Ivoire orange.
+// Dedicated Guinea deployment — single national palette pulled from the flag.
 const COUNTRY_COLORS: Record<string, string> = {
   GIN: '#006b3f', // Guinea — Pan-African green
-  GHA: '#d68a18', // Ghana — flag gold (saffron)
-  CIV: '#f77f00', // Côte d'Ivoire — flag orange
 };
 
 const COUNTRY_NAMES: Record<string, string> = {
   GIN: 'Guinea',
-  GHA: 'Ghana',
-  CIV: "Côte d'Ivoire",
 };
 
 const EITI_CATEGORIES = [
@@ -125,8 +120,6 @@ export function TransparencyPage() {
             : 100;
         const modifier: Record<string, Record<string, number>> = {
           GIN: { production: 5, financial: 3, infrastructure: -15, 'local-employment': -8, environmental: -10, 'community-development': -20 },
-          GHA: { production: 8, financial: 5, infrastructure: 2, 'local-employment': -12, environmental: 3, 'community-development': -18 },
-          CIV: { production: 3, financial: 4, infrastructure: -5, 'local-employment': -8, environmental: 2, 'community-development': -5 },
         };
         entry[c.id] = Math.min(100, Math.max(0, base + (modifier[c.id]?.[cat.key] ?? 0)));
       }
@@ -183,7 +176,7 @@ export function TransparencyPage() {
     <div ref={printRef}>
       <PageHeader
         title="Public Reporting"
-        subtitle="The figures we publish openly, and how each country scores."
+        subtitle="The figures Guinea publishes openly, and how it scores against the EITI standard."
         badge="M5 · Transparency & Reporting"
         actions={
           <button
@@ -201,35 +194,35 @@ export function TransparencyPage() {
       {/* System-wide summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <MetricCard
-          label="System Compliance"
+          label="National Compliance"
           value={`${systemMetrics.systemComplianceRate}%`}
           accent={systemMetrics.systemComplianceRate >= 70 ? 'green' : 'amber'}
-          hint="The share of all commitments being kept across every country in scope. Higher is better."
+          hint="The share of all commitments being kept across Guinea's mining agreements. Higher is better."
         />
-        <MetricCard label="Active Agreements" value={systemMetrics.totalActiveAgreements} accent="blue" hint="Total mining contracts currently in force across the region." />
+        <MetricCard label="Active Agreements" value={systemMetrics.totalActiveAgreements} accent="blue" hint="Total mining contracts currently in force in Guinea." />
         <MetricCard
           label="Breached Commitments"
           value={systemMetrics.breachedCommitments}
           accent={systemMetrics.breachedCommitments > 0 ? 'red' : 'green'}
-          hint="Promises that have already been broken across all tracked agreements."
+          hint="Promises that have already been broken across all tracked Guinean agreements."
         />
         <MetricCard
           label="Critical Flags"
           value={systemMetrics.openCriticalFlags}
           accent={systemMetrics.openCriticalFlags > 0 ? 'red' : 'green'}
-          hint="Open risk alerts at the most serious level, region-wide."
+          hint="Open risk alerts at the most serious level, nationwide."
         />
       </div>
 
-      {/* Cross-country comparison table */}
+      {/* National governance summary table */}
       <div className="bg-surface rounded-xl border border-line shadow-card mb-5 overflow-hidden">
         <div className="px-5 py-3 border-b border-line-soft bg-surface-2">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">Cross-Country Comparison</h2>
-          <p className="text-[11px] mt-0.5 text-ink-4">Key governance and compliance metrics by country</p>
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-ink-2">National Governance Summary</h2>
+          <p className="text-[11px] mt-0.5 text-ink-4">Key governance and compliance metrics for Guinea</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <caption className="sr-only">Governance and compliance metrics compared across the three countries.</caption>
+            <caption className="sr-only">Guinea governance and compliance metrics.</caption>
             <thead>
               <tr className="border-b border-line-soft bg-surface-2">
                 {['Country', 'Ministry', 'Active Agreements', 'Operators', 'Avg Compliance', 'Operators in Breach', 'Avg Royalty Rate'].map(h => (
@@ -292,10 +285,10 @@ export function TransparencyPage() {
       <ChartPanel
         className="mb-5"
         title="Compliance by Category (EITI-aligned)"
-        caption="Compliance rates by commitment type, compared across countries."
-        howToRead="Bars are grouped by category, one colour per country. Taller bars mean better compliance in that theme — handy for seeing which country leads or lags on each one."
+        caption="Guinea's compliance rates by commitment type."
+        howToRead="Each bar is one category. Taller bars mean better compliance in that theme — handy for seeing where Guinea leads or lags across its obligations."
         aiRegion="EITI-Aligned Compliance by Category"
-        ariaLabel="Grouped bar chart of EITI-aligned compliance rates by category for Guinea, Ghana, and Côte d'Ivoire."
+        ariaLabel="Bar chart of Guinea's EITI-aligned compliance rates by category."
         bodyClassName="p-5 h-72"
       >
           <ResponsiveContainer width="100%" height="100%">
@@ -374,8 +367,8 @@ export function TransparencyPage() {
       <ChartPanel
         className="mb-5"
         title="Operator Compliance Scorecards"
-        caption="Every operator ranked side by side, lowest compliance first."
-        howToRead="Each bar is one mining company; longer bars keep more of their promises. Bar colour shows the country. The companies needing attention sit at the top."
+        caption="Every Guinean operator ranked side by side, lowest compliance first."
+        howToRead="Each bar is one mining company; longer bars keep more of their promises. The companies needing attention sit at the top."
         aiRegion="Operator Compliance Scorecards"
         ariaLabel={`Horizontal bar chart ranking ${scorecards.length} operators by compliance rate.`}
         bodyClassName="p-5"
@@ -422,57 +415,50 @@ export function TransparencyPage() {
               <Bar dataKey="rate" radius={[0, 3, 3, 0]} />
             </BarChart>
           </ResponsiveContainer>
-          <div className="flex items-center gap-5 mt-3 flex-wrap">
-            {Object.entries(COUNTRY_NAMES).map(([code, name]) => (
-              <div key={code} className="flex items-center gap-1.5 text-[12px] text-ink-3">
-                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: COUNTRY_COLORS[code] }} aria-hidden />
-                {name}
-              </div>
-            ))}
-          </div>
       </ChartPanel>
 
-      {/* Cross-Country Governance Insights — comparative synthesis per markdown.md §5.4 */}
+      {/* National Governance Posture — Guinea synthesis per markdown.md §5.1 */}
       <div className="bg-surface rounded-xl border border-line shadow-card p-5">
         <h2 className="text-[11px] font-bold uppercase tracking-widest mb-1 text-ink-2">
-          Cross-Country Governance Pathologies
+          National Governance Posture
         </h2>
         <p className="text-[11px] mb-4 text-ink-4 max-w-3xl leading-relaxed">
-          The three jurisdictions exhibit structurally complementary governance pathologies rather than identical
-          institutional failures — justifying a regional ACCI deployment under ECOWAS auspices (markdown §5.4, §8.2).
+          Guinea's governance profile — a formally robust legal framework operationalised through highly
+          discretionary ministerial practice — frames where continuous-assurance instrumentation adds the most
+          value (markdown §5.1, §8.1).
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             {
-              country: 'Guinea',
-              tag: 'Hyper-discretionary regime',
-              tagColor: '#ce1126',
-              tagBg: '#FEF2F2',
-              tagBorder: '#FECACA',
-              insight:
-                'Formally robust law (Code Minier L/2011/006/CNT) operationalised through politically-inflected ministerial decisions — 129 mineral-exploration permits cancelled 26 May 2025 plus an earlier 51-licence purge, generating the Axis International USD 28.9 bn ICSID claim (filed 25 Dec 2025, registered 16 Jan 2026) and a wider arbitration docket. EITI 88/100 (Feb 2022); NRGI 62/100 (2021).',
-            },
-            {
-              country: 'Ghana',
-              tag: 'Environmental-enforcement vacuum',
-              tagColor: '#92400E',
-              tagBg: '#FFFBEB',
-              tagBorder: '#FDE68A',
-              insight:
-                'Strong formal architecture (Ghana Gold Board Act 2025 / Act 1140; Royalty Regulations 2025 sliding 5–12%) confronts a structural enforcement gap against the galamsey economy — ~60% of water bodies polluted (Water Resources Commission), turbidity readings of 32,000 NTU vs the 2,000 NTU GWCL treatment-design threshold; 6 August 2025 Z-9 helicopter crash killed Defence and Environment Ministers. NRGI 69/100 (2021).',
-            },
-            {
-              country: "Côte d'Ivoire",
-              tag: 'Expanding fiscal architecture',
+              title: 'Legal framework',
+              tag: 'Formally robust',
               tagColor: '#066040',
               tagBg: '#e7f4ef',
               tagBorder: '#94cdb0',
               insight:
-                'Ambitious but under-monitored expansion trajectory: PIRME adopted 3 Dec 2025 (CFA 38,000 bn / ~USD 67–68 bn, 15 years; mining-energy GDP share 7%→14% by 2040) and 2025 Finance Act 8% gold royalty above USD 2,000/oz outpace institutional monitoring capacity. MSPI (World Bank, 11 July 2025) anchors ASM formalisation for >500,000 livelihoods. Not assessed in 2021 NRGI RGI.',
+                'Code Minier L/2011/006/CNT (as amended by L/2013/053/CNT) grants a 15% non-dilutable state free-carried interest (option to 35%), a 30% profits tax and an LDF levy. SOGUIPAMI is the institutional custodian. EITI 88/100 (16 Feb 2022); NRGI 62/100 (2021); next validation under the 2023 EITI Standard commenced 1 Oct 2025.',
+            },
+            {
+              title: 'Enforcement practice',
+              tag: 'Hyper-discretionary',
+              tagColor: '#ce1126',
+              tagBg: '#FEF2F2',
+              tagBorder: '#FECACA',
+              insight:
+                'Politically-inflected ministerial decisions — 129 mineral-exploration permits cancelled 26 May 2025 plus an earlier 51-licence purge, and the GAC/EGA concession revocation — have generated the Axis International USD 28.9 bn ICSID claim (filed 25 Dec 2025, registered 16 Jan 2026) and a wider arbitration docket.',
+            },
+            {
+              title: 'Transparency gaps',
+              tag: 'Beneficial ownership pending',
+              tagColor: '#92400E',
+              tagBg: '#FFFBEB',
+              tagBorder: '#FDE68A',
+              insight:
+                'Beneficial-ownership legislation drafted 2019 and resubmitted 2024 remains pending enactment; a 2022 EITI request reached only nine of ~450 operators. The 30 Dec 2025 publication of Simandou-related agreements is a structural opening for machine-readable contract disclosure under EITI Requirement 2.4.',
             },
           ].map(item => (
-            <div key={item.country} className="rounded-lg p-3.5 border border-line bg-surface-2">
-              <div className="text-[12px] font-bold mb-1.5 text-ink">{item.country}</div>
+            <div key={item.title} className="rounded-lg p-3.5 border border-line bg-surface-2">
+              <div className="text-[12px] font-bold mb-1.5 text-ink">{item.title}</div>
               <div className="text-[12px] leading-relaxed mb-3 text-ink-3">{item.insight}</div>
               <span
                 className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md"
