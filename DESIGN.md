@@ -85,5 +85,5 @@ When charts must distinguish countries, each line/bar uses its own flag colour:
 - **Hover States**: Simple background color shifts or border color darkening. No floating or lifting animations (`transform: translateY`).
 
 ## Implementation Constraints
-- AI code generation tools must respect these tokens and avoid introducing unauthorized utility classes (like `backdrop-blur`, `bg-opacity`, or non-standard colors).
+- Implementations must respect these tokens and avoid introducing unauthorized utility classes (like `backdrop-blur`, `bg-opacity`, or non-standard colors).
 - New colours must come from this palette only. Country charts may use the per-country flag palette above; nothing else.

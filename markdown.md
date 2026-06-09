@@ -707,8 +707,8 @@ Three providers, all speaking the OpenAI chat-completions wire format:
    (Ollama / LM Studio / llama.cpp), default base URL `http://localhost:11434/v1`.
    This is the **data-sovereignty mode**: compliance data never leaves the
    machine. Default model `llama3.2:3b`; menu also offers Gemma 3 (4B/12B),
-   GPT-OSS 20B, Llama 3.1 8B, Qwen 2.5 7B, Mistral 7B, and a large "Qwen 3.6 40B
-   Opus-Deckard" thinking+code model.
+   GPT-OSS 20B, Llama 3.1 8B, Qwen 2.5 7B, Mistral 7B, and QwQ 32B (a
+   reasoning model).
 2. **`pollinations`** — hosted, keyless, anonymous OpenAI-compatible endpoint
    (`text.pollinations.ai/openai`). Demo fallback when no local LLM exists.
 3. **`openrouter`** — hosted, user-supplied API key; unlocks larger open-weight

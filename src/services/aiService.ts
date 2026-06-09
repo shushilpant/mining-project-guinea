@@ -300,7 +300,7 @@ export async function streamChat(opts: StreamOptions, handlers: StreamHandlers):
 /**
  * Pulls the assistant content delta out of an OpenAI-style streaming chunk.
  *
- * Thinking models (e.g. Qwen3.6-Opus-Deckard) emit `reasoning_content` deltas
+ * Thinking models (e.g. QwQ, DeepSeek-R1) emit `reasoning_content` deltas
  * during internal chain-of-thought, then switch to `content` for the final
  * answer. We surface **both** so the AI panel shows progress during the
  * thinking phase — reasoning tokens are prefixed to make them visually

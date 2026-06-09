@@ -32,7 +32,7 @@ export interface AIModelOption {
 export const LOCAL_MODELS: AIModelOption[] = [
   { id: 'llama3.2:3b',   label: 'Llama 3.2 · 3B (instant)', hint: 'Meta · ~2 GB · lowest latency local default' },
   { id: 'gemma3:4b',     label: 'Gemma 3 · 4B',             hint: 'Google · ~3 GB · fast on 8 GB RAM' },
-  { id: 'qwen3.6-40b-claude-4.6-opus-deckard-heretic-uncensored-thinking-neo-code-di-imatrix-max',  label: 'Qwen 3.6 · 40B Opus-Deckard', hint: 'DavidAU · Q4_K_S · uncensored · thinking + code' },
+  { id: 'qwq:32b',      label: 'QwQ · 32B (reasoning)',    hint: 'Alibaba · ~20 GB · thinking + reasoning' },
   { id: 'gemma3:12b',    label: 'Gemma 3 · 12B',           hint: 'Google · ~8 GB · stronger reasoning' },
   { id: 'gpt-oss:20b',   label: 'GPT-OSS · 20B',           hint: 'OpenAI open-weight · ~13 GB · best quality' },
   { id: 'llama3.1:8b',   label: 'Llama 3.1 · 8B',          hint: 'Meta · ~5 GB · solid all-rounder' },

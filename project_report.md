@@ -1,9 +1,9 @@
-# Investor & Compliance Intelligence System - Project Overview
+# ACCI — Adaptive Continuous Compliance Intelligence: Project Overview
 
-This document serves as a comprehensive reference guide for the "Investor & Compliance Intelligence System" project. It contains all the necessary architectural, design, and technical details required to write a detailed report or journal paper about the system.
+This document is a comprehensive reference guide for the **ACCI (Adaptive Continuous Compliance Intelligence)** project. It contains the architectural, design, and technical details required to write a detailed report or journal paper about the system.
 
 ## 1. Project Overview
-The **Investor & Compliance Intelligence System** is a web-based dashboard and intelligence platform designed specifically for West African mining authorities (with a focus on Ghana, Guinea, and Côte d'Ivoire). The system provides a centralized hub to monitor operator performance, track compliance with mining agreements, assess risks, trace beneficial ownership, monitor local content contributions, and leverage AI for briefing and negotiation preparation.
+**ACCI (Adaptive Continuous Compliance Intelligence)** is a web-based dashboard and intelligence platform designed specifically for West African mining authorities (with a focus on Ghana, Guinea, and Côte d'Ivoire). The system provides a centralized hub to monitor operator performance, track compliance with mining agreements, assess risks, trace beneficial ownership, monitor local content contributions, and leverage AI for briefing and negotiation preparation.
 
 ## 2. Technology Stack
 The application is a modern, high-performance frontend built with the following core technologies:
@@ -41,6 +41,11 @@ The application is structured into several modular pages (located in `src/pages`
 - **Negotiation (`/negotiation`):** Tools and AI-assisted briefing generation for contract renewals and disputes.
 - **Ownership (`/ownership`):** Tracing of Ultimate Beneficial Owners (UBOs), identifying Politically Exposed Persons (PEPs), and mapping corporate structures.
 - **Local Content (`/local-content`):** Tracking operator commitments to local employment, procurement, and community funds.
+- **ESG (`/esg`):** Environmental, social, and governance indicators.
+- **Market Intelligence (`/market`):** Commodity market context relevant to the region.
+- **Documents (`/documents`):** Document register with access logging.
+- **Public Portal (`/public-data`):** Public-facing transparency view.
+- **Regulatory Tracker (`/regulatory`):** Tracking of regulatory and legislative change.
 - **Admin (`/admin`):** System configuration, including AI provider settings.
 - **Audit Monitor (`/audit`):** An immutable log of system actions and document access.
 
@@ -59,8 +64,8 @@ The system includes a robust, provider-agnostic AI service layer (`src/services/
 - **Supported Providers:**
   - **Local:** Ollama or LM Studio for complete data sovereignty and air-gapped deployments.
   - **Pollinations:** Keyless, anonymous OpenAI-compatible endpoints.
-  - **OpenRouter:** For accessing advanced proprietary models (e.g., Claude, GPT-4) when authorized.
-- **Streaming & Parsing:** Includes an SSE parser for streaming responses and logic to extract `reasoning_content` from "thinking" models (e.g., Qwen3.6-Opus-Deckard) to show progress before final answers.
+  - **OpenRouter:** For accessing larger open-weight models (e.g., Llama 3.3 70B, DeepSeek V3, Qwen 2.5 72B) when a key is supplied and authorized.
+- **Streaming & Parsing:** Includes an SSE parser for streaming responses and logic to extract `reasoning_content` from "thinking" models (e.g., QwQ) to show progress before final answers.
 - **Structured Output:** Capable of non-streaming completions with a custom `extractJSON` fallback parser that is tolerant of markdown formatting or prose wrappers.
 - **Prompt Injection Hardening:** Implements `fenceUserText` to sanitize user inputs and prevent basic prompt injection attacks (redacting "ignore previous instructions", etc.).
 - **Observability:** In-memory ring buffer tracking the last 50 AI calls (latency, success rate) for admin monitoring.
@@ -70,4 +75,4 @@ The system includes a robust, provider-agnostic AI service layer (`src/services/
 - **Role-Based Views:** Data and features are scoped based on user roles and jurisdictional access.
 
 ## Conclusion
-The **Investor & Compliance Intelligence System** is a sophisticated, highly tailored application designed to empower West African governments. By combining a strict institutional design language, complex data modeling of the extractive industries, and sovereign AI capabilities, it provides actionable intelligence to ensure fair negotiations, environmental protection, and regulatory compliance.
+**ACCI** is a sophisticated, highly tailored application designed to empower West African governments. By combining a strict institutional design language, complex data modeling of the extractive industries, and sovereign AI capabilities, it provides actionable intelligence to ensure fair negotiations, environmental protection, and regulatory compliance.

@@ -47,8 +47,8 @@ export function AISettingsTab() {
             <h3 className="text-sm font-semibold text-ink">ACCI Compliance Analyst</h3>
             <p className="text-xs text-ink-3 mt-1 leading-relaxed">
               An open-source AI model grounded in the live compliance data you are viewing.
-              Defaults to a <span className="font-semibold text-ink-2">local LLM</span> (Qwen 3.6
-              40B Opus-Deckard via LM Studio) so no compliance data ever leaves your machine.
+              Defaults to a <span className="font-semibold text-ink-2">local LLM</span> (Llama 3.2
+              3B via Ollama) so no compliance data ever leaves your machine.
               Hosted providers (Pollinations, OpenRouter) remain available as fallbacks for
               demos and machines without a local runtime.
             </p>
