@@ -2,13 +2,14 @@
 // aiSettingsStore — persisted config for the AI Compliance Analyst.
 //
 // Three providers ship:
-//   • local         — DEFAULT. Talks to a locally-running OpenAI-compatible
-//                     server (Ollama, LM Studio, llama.cpp). Runs entirely
-//                     on the user's machine — no data ever leaves it. The
-//                     primary mode for ministerial use of this tool, since
-//                     compliance data must not transit the public internet.
-//   • pollinations  — Hosted, keyless, OpenAI-compatible. Fallback for demos
-//                     where no local LLM is available. Stays anonymous.
+//   • local         — DEFAULT on localhost. Talks to a locally-running
+//                     OpenAI-compatible server (Ollama, LM Studio, llama.cpp).
+//                     Runs entirely on the user's machine — no data ever leaves
+//                     it. The primary mode for ministerial use of this tool,
+//                     since compliance data must not transit the public internet.
+//   • pollinations  — Hosted, keyless, OpenAI-compatible. DEFAULT on hosted
+//                     deployments (e.g. Vercel) where no local LLM is
+//                     reachable. Stays anonymous.
 //   • openrouter    — Hosted, user-key. Unlocks larger open-weight models
 //                     when running on user-owned infrastructure.
 //
@@ -51,9 +52,23 @@ export const OPENROUTER_MODELS: AIModelOption[] = [
   { id: 'mistralai/mistral-small-3.1-24b-instruct:free',  label: 'Mistral Small 3.1 24B', hint: 'Mistral · open weights' },
 ];
 
-export const DEFAULT_PROVIDER: AIProvider = 'local';
+// A locally-hosted LLM (Ollama / LM Studio) is only reachable when the app
+// itself runs on the operator's machine. On any hosted deployment (e.g. the
+// Vercel demo) localhost:11434 does not exist, so the local provider can never
+// answer. We therefore default hosted deployments to the keyless online
+// provider (Pollinations), while localhost keeps the privacy-preserving local
+// default. Detected at runtime from the page's hostname.
+function isLocalhostDeployment(): boolean {
+  if (typeof window === 'undefined') return true; // build/SSR: assume local-friendly
+  const h = window.location.hostname;
+  return h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h.endsWith('.local');
+}
+
+export const IS_HOSTED_DEPLOYMENT = !isLocalhostDeployment();
+
+export const DEFAULT_PROVIDER: AIProvider = IS_HOSTED_DEPLOYMENT ? 'pollinations' : 'local';
 export const DEFAULT_LOCAL_BASE_URL = 'http://localhost:11434/v1';
-export const DEFAULT_MODEL = LOCAL_MODELS[0].id;
+export const DEFAULT_MODEL = IS_HOSTED_DEPLOYMENT ? POLLINATIONS_MODELS[0].id : LOCAL_MODELS[0].id;
 
 interface AISettingsState {
   provider: AIProvider;
@@ -103,7 +118,17 @@ export const useAISettingsStore = create<AISettingsState>()(
         enabled: true,
       }),
     }),
-    { name: 'peb-ai-settings-v5' },
+    {
+      name: 'peb-ai-settings-v5',
+      // On a hosted deployment a local LLM is unreachable. If an older persisted
+      // session still points at 'local', move it onto the keyless online provider
+      // so the AI features work out of the box. Localhost is left untouched.
+      onRehydrateStorage: () => (state) => {
+        if (state && IS_HOSTED_DEPLOYMENT && state.provider === 'local') {
+          state.setProvider('pollinations');
+        }
+      },
+    },
   ),
 );
 
